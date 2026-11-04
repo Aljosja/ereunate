@@ -7,7 +7,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('ereunate:' + k, JSON.stringify(v)); } catch { /* geen opslag beschikbaar */ } }
 };
 const settings = Object.assign(
-  { sv: true, orig: true, marks: true, layout: 'stack', size: 18, showOrigInSearch: true, wholeWords: true, exact: false, scope: 'all', claudeAsk: 0 },
+  { sv: true, orig: true, marks: true, mine: true, searchIn: 'bible', layout: 'stack', size: 18, showOrigInSearch: true, wholeWords: true, exact: false, scope: 'all', claudeAsk: 0 },
   store.get('settings', {})
 );
 const saveSettings = () => store.set('settings', settings);
@@ -47,7 +47,8 @@ const ICON = {
   chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
   copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>',
   dl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>',
-  up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/></svg>'
+  up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/></svg>',
+  pen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>'
 };
 const bookById = id => BOOKS.findIndex(b => b.id.toLowerCase() === String(id || '').toLowerCase());
 const readHref = (bi, c, v) => '#/lezen/' + BOOKS[bi].id + '/' + c + (v ? '/' + v : '');
@@ -110,8 +111,9 @@ function route() {
   if (r.view === 'bladeren') renderBrowse();
   else if (r.view === 'zoeken') renderSearch(r);
   else if (r.view === 'voortgang') renderProgress();
+  else if (r.view === 'mijn') renderMine();
   else renderRead(r);
-  setTab(['bladeren', 'zoeken', 'voortgang'].includes(r.view) ? r.view : 'lezen');
+  setTab(['bladeren', 'zoeken'].includes(r.view) ? r.view : ['mijn', 'voortgang'].includes(r.view) ? 'mijn' : 'lezen');
 }
 
 /* =====================================================================
@@ -167,6 +169,7 @@ function renderRead(r) {
             <button class="chip small" id="t-sv">SV</button>
             <button class="chip small" id="t-orig">${kindName}</button>
             <button class="chip small" id="t-kt">Kanttekeningen</button>
+            <button class="chip small" id="t-my">Mijn</button>
           </div>
           <div class="toolrow" style="padding:0">
             <div class="seg" role="group" aria-label="Indeling">
@@ -182,6 +185,7 @@ function renderRead(r) {
     $('#t-sv').onclick = () => { settings.sv = !settings.sv; saveSettings(); fillReader(bi, c, null, prev, next); };
     $('#t-orig').onclick = () => { settings.orig = !settings.orig; saveSettings(); fillReader(bi, c, null, prev, next); };
     $('#t-kt').onclick = () => { settings.marks = !settings.marks; saveSettings(); fillReader(bi, c, null, prev, next); };
+    $('#t-my').onclick = () => { settings.mine = !settings.mine; saveSettings(); fillReader(bi, c, null, prev, next); };
     $('#reader').addEventListener('click', e => {
       if (e.target.closest('a')) return;
       const rb = e.target.closest('.read-btn');
@@ -198,20 +202,19 @@ function renderRead(r) {
     $('#s-up').onclick = () => { settings.size = Math.min(28, settings.size + 1); saveSettings(); applySize(); };
     addSwipe($('#reader-scroll'), prev, next);
   }
+  redrawReader = () => { if (view.dataset.view === 'lezen' && pos.b === bi && pos.c === c) fillReader(bi, c, null, prev, next); };
   fillReader(bi, c, target, prev, next, !sameChapter);
 }
+let redrawReader = null;
 
 function syncReaderControls() {
   const both = settings.sv && settings.orig;
   const cols = both && settings.layout === 'cols';
   const set = (id, on) => { const el = $('#' + id); if (el) el.setAttribute('aria-pressed', on ? 'true' : 'false'); };
-  set('t-sv', settings.sv); set('t-orig', settings.orig); set('t-kt', settings.marks);
+  set('t-sv', settings.sv); set('t-orig', settings.orig); set('t-kt', settings.marks); set('t-my', settings.mine);
   set('l-stack', !cols); set('l-cols', cols);
   $('#l-cols').disabled = !both;
-  ['t-sv', 't-orig', 't-kt'].forEach(id => {
-    const el = $('#' + id); const on = el.getAttribute('aria-pressed') === 'true';
-    el.innerHTML = (on ? ICON.check : '') + el.textContent.trim();
-  });
+
 }
 
 async function fillReader(bi, c, target, prev, next, resetScroll) {
@@ -250,7 +253,9 @@ async function fillReader(bi, c, target, prev, next, resetScroll) {
             body += `<p class="t-orig${settings.sv ? '' : ' solo'}" lang="${lang}"${dir}>${tag}${esc(o.text)}</p>`;
           } else if (cols) body += '<p class="t-orig"></p>';
         }
-        html += `<div class="verse${v === target ? ' target' : ''}" id="v${v}" data-v="${v}"><span class="vnum">${v}</span><div class="vbody${cols ? ' cols' : ''}">${body}</div></div>`;
+        const mk = settings.mine ? markFor(bi, c, v) : null;
+        if (mk && mk.note && mk.note.trim()) body += `<div class="mynote">${ICON.pen}<span><b>Mijn notitie:</b> ${myNoteHTML(mk.note)}</span></div>`;
+        html += `<div class="verse${v === target ? ' target' : ''}${mk && mk.col ? ' hl hl-' + mk.col : ''}" id="v${v}" data-v="${v}"><span class="vnum">${v}</span><div class="vbody${cols ? ' cols' : ''}">${body}</div></div>`;
       });
     }
     const done = isRead(bi, c);
@@ -450,6 +455,9 @@ function renderSearch(r) {
           <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Woord, zin, Grieks of Hebreeuws" value="${esc(q)}">
           <button type="button" class="icon-btn" id="qclear" aria-label="Zoekterm wissen">${ICON.x}</button>
         </form>
+        <div class="seg seg3" role="group" aria-label="Zoeken in">
+          <button data-in="bible">Bijbel</button><button data-in="kt">Kanttekeningen</button><button data-in="mine">Mijn notities</button>
+        </div>
         <div class="chips" role="group" aria-label="Zoekopties">
           <span class="chip-select"><span id="scope-label" aria-hidden="true"></span>${ICON.down}<label for="scope" class="sr-only">Zoeken in</label><select id="scope">${sel}</select></span>
           <button class="chip small" id="o-whole">Hele woorden</button>
@@ -472,11 +480,15 @@ function renderSearch(r) {
   $('#scope').onchange = e => { settings.scope = e.target.value; saveSettings(); scopeLabel(); go(); };
   const toggle = (id, key) => { $('#' + id).onclick = () => { settings[key] = !settings[key]; saveSettings(); syncSearchChips(); go(); }; };
   toggle('o-whole', 'wholeWords'); toggle('o-exact', 'exact'); toggle('o-orig', 'showOrigInSearch');
+  document.querySelectorAll('[data-in]').forEach(b => b.onclick = () => { settings.searchIn = b.dataset.in; saveSettings(); syncSearchChips(); go(); });
   syncSearchChips();
   runSearch(q);
   if (!q) setTimeout(() => input.focus(), 50);
 }
 function syncSearchChips() {
+  document.querySelectorAll('[data-in]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.in === (settings.searchIn || 'bible'))));
+  const orig = $('#o-orig'); if (orig) orig.hidden = (settings.searchIn || 'bible') !== 'bible';
+  const inp = $('#q'); if (inp) inp.placeholder = { bible: 'Woord, zin, Grieks of Hebreeuws', kt: 'Zoek in de kanttekeningen', mine: 'Zoek in je notities en #thema\'s' }[settings.searchIn || 'bible'];
   [['o-whole', 'wholeWords'], ['o-exact', 'exact'], ['o-orig', 'showOrigInSearch']].forEach(([id, key]) => {
     const el = $('#' + id); if (!el) return;
     const label = el.textContent.trim();
@@ -493,6 +505,7 @@ async function runSearch(q) {
   if (!box) return;
   const ref = parseRef(q);
   const gotoCard = ref ? `<a class="card goto" href="${readHref(ref.b, ref.c, ref.v)}">Ga naar ${esc(refLabel(ref.b, ref.c, ref.v))}${ICON.right}</a>` : '';
+  if ((settings.searchIn || 'bible') !== 'bible') { searchState = { q }; return runSearchExtra(q, gotoCard, box); }
   const kind = scriptOf(q);
   if (kind !== 'sv' && !ORIG[kind]) {
     box.innerHTML = gotoCard + '<p class="loading">Grondtekst laden…</p>';

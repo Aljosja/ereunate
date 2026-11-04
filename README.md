@@ -8,12 +8,13 @@ Een kleine webapp (PWA) om de **Statenvertaling** te lezen en te doorzoeken naas
 
 - **Lezen**: SV en grondtekst per vers, onder elkaar of naast elkaar. Beide teksten los aan en uit te zetten. Tekstgrootte instelbaar. Vegen naar links of rechts gaat naar het volgende of vorige hoofdstuk.
 - **Bladeren**: boek en hoofdstuk kiezen, of direct naar een tekstplaats (`joh 3:16`, `1 kor 13`, `ps 23`). Recent gelezen hoofdstukken staan bovenaan.
-- **Zoeken**: op woorden of een exacte zin in de SV, in de hele Bijbel, een testament of één boek. Typ Grieks of Hebreeuws om in de grondtekst te zoeken. Accenten en klinkertekens hoef je niet te typen.
+- **Zoeken**: op woorden of een exacte zin in de SV, in de hele Bijbel, een testament of één boek. Typ Grieks of Hebreeuws om in de grondtekst te zoeken. Accenten en klinkertekens hoef je niet te typen. Ook zoeken in alle kanttekeningen en in je eigen notities.
+- **Markeren en notities**: geef een vers een van 10 kleuren en schrijf er een notitie bij, met #thema's om te groeperen. Te zien in de leestekst (aan/uit met de knop Mijn) en in de tab Mijn, met filters op kleur, notitie en thema.
 - **Kanttekeningen**: alle kanttekeningen van de Statenvertaling, met onderstreepte trefwoorden in de tekst. Tik op een vers of lettertje voor het verspaneel. Verwijzingen zijn aan te tikken en openen een nieuw paneel; met het kruimelpad ga je terug.
 - **Woorden**: in het verspaneel tik je op een woord in de SV of de grondtekst. Je ziet het Griekse of Hebreeuwse woord, de grondvorm, de grammatica in het Nederlands, hoe de SV het woord elders vertaalt, de betekenis uit Strong's woordenboek en alle verzen waar het voorkomt.
 - **Uitleg online**: per hoofdstuk direct naar King Comments en Matthew Henry.
 - **Vraag Claude**: opent Claude met het vers in SV en grondtekst en een vraag naar keuze (letterlijke vertaling, afwijkingen, moeilijke woorden of een eigen vraag).
-- **Voortgang**: hoofdstukken afvinken, overzicht per boek, en aanbevelingen op basis van de verwijzingen in de kanttekeningen bij wat je las. Met back-up en terugzetten.
+- **Voortgang** (tab Mijn): hoofdstukken afvinken, overzicht per boek, en aanbevelingen op basis van de verwijzingen in de kanttekeningen bij wat je las. Met back-up en terugzetten; markeringen en notities gaan daarin mee.
 - **Versnummering**: waar de SV anders nummert dan de grondtekst (bijv. Exodus 5:24 = Hebr. 6:1, Maleachi 4 = Hebr. 3:19–24) staat de juiste grondtekst ernaast, met het afwijkende nummer erbij.
 
 ## Op je telefoon zetten
