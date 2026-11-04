@@ -219,7 +219,9 @@ function fillVerseSheet(el, bi, ref, opt) {
     if (t.dataset.more != null) { el.querySelectorAll('.more-note').forEach(n => (n.hidden = false)); t.remove(); return; }
     if (t.dataset.allrefs != null) {
       const list = el.querySelector('.reflist'); list.hidden = !list.hidden;
-      t.setAttribute('aria-expanded', String(!list.hidden)); return;
+      t.setAttribute('aria-expanded', String(!list.hidden));
+      if (!list.hidden) list.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return;
     }
     if (t.dataset.read != null) { goFromSheet(readHref(bi, firstC, ref[2] || null)); return; }
     if (t.dataset.claude != null) { openClaudeSheet(bi, ref); return; }
