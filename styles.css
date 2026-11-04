@@ -338,3 +338,4 @@ mark{background:var(--mark);color:inherit;padding:0 2px;border-radius:3px}
 .sortbtn{display:flex;align-items:center;gap:4px;min-height:40px;padding:0 4px;border:0;background:none;color:var(--accent);font-size:14px;font-weight:600}
 .sortbtn svg{width:16px;height:16px}
 .kt-cw{display:flex;align-items:center;gap:8px;font-family:var(--serif);font-style:italic;font-weight:600;font-size:15px}
+.chips.more-right{-webkit-mask-image:linear-gradient(to right,#000 82%,transparent);mask-image:linear-gradient(to right,#000 82%,transparent)}

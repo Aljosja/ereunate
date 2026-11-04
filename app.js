@@ -169,7 +169,7 @@ function renderRead(r) {
             <button class="chip small" id="t-sv">SV</button>
             <button class="chip small" id="t-orig">${kindName}</button>
             <button class="chip small" id="t-kt">Kanttekeningen</button>
-            <button class="chip small" id="t-my">Mijn</button>
+            <button class="chip small" id="t-my">Markeringen</button>
           </div>
           <div class="toolrow" style="padding:0">
             <div class="seg" role="group" aria-label="Indeling">
@@ -214,6 +214,14 @@ function syncReaderControls() {
   set('t-sv', settings.sv); set('t-orig', settings.orig); set('t-kt', settings.marks); set('t-my', settings.mine);
   set('l-stack', !cols); set('l-cols', cols);
   $('#l-cols').disabled = !both;
+  const row = $('.top .chips');
+  if (row && !row.dataset.fade) {
+    row.dataset.fade = '1';
+    const upd = () => row.classList.toggle('more-right', row.scrollLeft + row.clientWidth < row.scrollWidth - 4);
+    row.addEventListener('scroll', upd, { passive: true });
+    window.addEventListener('resize', upd);
+    requestAnimationFrame(upd);
+  }
 
 }
 
