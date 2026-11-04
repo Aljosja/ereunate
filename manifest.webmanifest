@@ -3,6 +3,7 @@
   "short_name": "Ereunate",
   "description": "Statenvertaling met Griekse en Hebreeuwse grondtekst, offline te lezen en te doorzoeken.",
   "lang": "nl",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

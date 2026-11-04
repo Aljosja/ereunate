@@ -585,6 +585,17 @@ function registerSW() {
   navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading) { reloading = true; location.reload(); } });
 }
 
+// Android/Chrome: eigen knop om te installeren, zodat je niet afhankelijk bent van het menu
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  if (store.get('installDismissed', false)) return;
+  setTimeout(() => toast('Zet Ereunate als app op je beginscherm.', 'Installeren', async () => {
+    e.prompt();
+    const { outcome } = await e.userChoice;
+    if (outcome !== 'accepted') store.set('installDismissed', true);
+  }), 1500);
+});
+
 async function start() {
   applySize();
   view.innerHTML = '<p class="loading">Bijbel laden…</p>';
