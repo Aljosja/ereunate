@@ -41,4 +41,4 @@ Het Hebreeuws wordt getoond met klinkertekens, zonder cantillatietekens. Hoe de 
 
 ## Techniek
 
-Gewone HTML, CSS en JavaScript, zonder framework of build-stap. `sw.js` slaat bij installatie alle bestanden op (ongeveer 11 MB, ingepakt zo'n 3 MB).
+Gewone HTML, CSS en JavaScript, zonder framework of build-stap. `sw.js` slaat bij installatie alle bestanden op (ongeveer 21 MB, ingepakt zo'n 6 MB).
