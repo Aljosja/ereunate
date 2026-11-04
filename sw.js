@@ -1,6 +1,6 @@
 /* Service worker: alles wordt bij installatie opgeslagen, zodat de app offline werkt.
    Bij elke nieuwe release VERSION ophogen; de app biedt dan "Vernieuwen" aan. */
-const VERSION = 'v1.3.1';
+const VERSION = 'v1.3.2';
 const CACHE = 'ereunate-' + VERSION;
 const FILES = [
   './', 'index.html', 'styles.css', 'app.js', 'features.js', 'manifest.webmanifest',

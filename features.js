@@ -224,6 +224,7 @@ function fillVerseSheet(el, bi, ref, opt) {
     body.querySelector('.sh-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b && b.dataset.tab !== tab) { tab = b.dataset.tab; showTab(true); } };
   }
   function showTab(switched) {
+    const mineSec = body.querySelector('.mine'); if (mineSec) mineSec.hidden = tab === 'w';
     el.querySelectorAll('[data-tab]').forEach(b => { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); b.setAttribute('aria-pressed', String(b.dataset.tab === tab)); });
     if (tab === 'kt') { tabc.innerHTML = ktHTML; }
     else {
@@ -612,18 +613,37 @@ function mineHTML(bi, c, v) {
   const sw = [0, ...COLORS.map((_, i) => i + 1)].map(i =>
     `<button class="sw sw-${i}" role="radio" data-col="${i}" aria-checked="${m.col === i}" aria-label="${i ? COLORS[i - 1] : 'Geen markering'}">${i ? ICON.check : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5"/></svg>'}</button>`).join('');
   return `<section class="mine" aria-label="Markeren en notitie">
+    <button class="mine-sum" aria-expanded="false">${mineSummary(m)}</button>
+    <div class="mine-body" hidden>
     <div class="mine-h"><h3 class="sh-h">Markeren</h3><span class="mine-c">${m.col ? COLORS[m.col - 1] : 'Niet gemarkeerd'}</span></div>
     <div class="swatches" role="radiogroup" aria-label="Kleur">${sw}</div>
     <label class="sh-h" for="my-note">Mijn notitie</label>
     <textarea id="my-note" rows="2" placeholder="Schrijf je gedachten… Met #thema groepeer je verzen.">${esc(m.note || '')}</textarea>
     <small class="mine-s">${m.t ? 'Bewaard ' + new Date(m.t).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' }) : 'Wordt vanzelf bewaard.'}</small>
+    </div>
   </section>`;
+}
+function mineSummary(m) {
+  const note = (m.note || '').trim();
+  const dot = m.col ? `<span class="dot hl-${m.col}" aria-hidden="true"></span>` : `<span class="mine-ico">${ICON.pen}</span>`;
+  const label = m.col || note
+    ? `<span class="ms-t">${m.col ? COLORS[m.col - 1] : 'Notitie'}${note ? ' · <span class="ms-n">' + esc(note.length > 60 ? note.slice(0, 58) + '…' : note) + '</span>' : ''}</span>`
+    : '<span class="ms-t">Markeren of notitie toevoegen</span>';
+  return dot + label + ICON.down;
 }
 function wireMine(root, bi, c, v) {
   const sec = root.querySelector('.mine');
   const ta = sec.querySelector('textarea');
   const status = sec.querySelector('.mine-s');
-  const refresh = () => { if (redrawReader) redrawReader(); };
+  const sum = sec.querySelector('.mine-sum');
+  const bodyEl = sec.querySelector('.mine-body');
+  const refresh = () => { if (redrawReader) redrawReader(); sum.innerHTML = mineSummary(markFor(bi, c, v) || { col: 0, note: '' }); };
+  sum.onclick = e => {
+    e.stopPropagation();
+    const open = bodyEl.hidden;
+    bodyEl.hidden = !open; sum.setAttribute('aria-expanded', String(open)); sec.classList.toggle('open', open);
+    if (open) setTimeout(grow, 0);
+  };
   const grow = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 260) + 'px'; };
   sec.querySelectorAll('.sw').forEach(b => b.onclick = e => {
     e.stopPropagation();
