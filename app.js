@@ -7,7 +7,7 @@ const store = {
   set(k, v) { try { localStorage.setItem('ereunate:' + k, JSON.stringify(v)); } catch { /* geen opslag beschikbaar */ } }
 };
 const settings = Object.assign(
-  { sv: true, orig: true, layout: 'stack', size: 18, showOrigInSearch: true, wholeWords: true, exact: false, scope: 'all' },
+  { sv: true, orig: true, marks: true, layout: 'stack', size: 18, showOrigInSearch: true, wholeWords: true, exact: false, scope: 'all', claudeAsk: 0 },
   store.get('settings', {})
 );
 const saveSettings = () => store.set('settings', settings);
@@ -42,7 +42,12 @@ const ICON = {
   check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>',
   search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',
   x: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>',
-  go: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>'
+  go: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>',
+  book: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"/><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>',
+  copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>',
+  dl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>',
+  up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/></svg>'
 };
 const bookById = id => BOOKS.findIndex(b => b.id.toLowerCase() === String(id || '').toLowerCase());
 const readHref = (bi, c, v) => '#/lezen/' + BOOKS[bi].id + '/' + c + (v ? '/' + v : '');
@@ -104,8 +109,9 @@ function route() {
   const r = parseHash();
   if (r.view === 'bladeren') renderBrowse();
   else if (r.view === 'zoeken') renderSearch(r);
+  else if (r.view === 'voortgang') renderProgress();
   else renderRead(r);
-  setTab(r.view === 'bladeren' || r.view === 'zoeken' ? r.view : 'lezen');
+  setTab(['bladeren', 'zoeken', 'voortgang'].includes(r.view) ? r.view : 'lezen');
 }
 
 /* =====================================================================
@@ -158,8 +164,9 @@ function renderRead(r) {
         </div>
         <div class="hdr-body" style="padding-top:2px">
           <div class="chips" role="group" aria-label="Teksten tonen">
-            <button class="chip" id="t-sv">SV</button>
-            <button class="chip" id="t-orig">${kindName}</button>
+            <button class="chip small" id="t-sv">SV</button>
+            <button class="chip small" id="t-orig">${kindName}</button>
+            <button class="chip small" id="t-kt">Kanttekeningen</button>
           </div>
           <div class="toolrow" style="padding:0">
             <div class="seg" role="group" aria-label="Indeling">
@@ -174,6 +181,17 @@ function renderRead(r) {
       <main class="scroll" id="reader-scroll"><div class="reader" id="reader"></div></main>`;
     $('#t-sv').onclick = () => { settings.sv = !settings.sv; saveSettings(); fillReader(bi, c, null, prev, next); };
     $('#t-orig').onclick = () => { settings.orig = !settings.orig; saveSettings(); fillReader(bi, c, null, prev, next); };
+    $('#t-kt').onclick = () => { settings.marks = !settings.marks; saveSettings(); fillReader(bi, c, null, prev, next); };
+    $('#reader').addEventListener('click', e => {
+      if (e.target.closest('a')) return;
+      const rb = e.target.closest('.read-btn');
+      if (rb) { toggleRead(pos.b, pos.c); fillReader(pos.b, pos.c, null, prev, next); return; }
+      const verse = e.target.closest('.verse');
+      if (!verse) return;
+      if (String(window.getSelection && window.getSelection()).length > 0) return;   // tekst selecteren
+      const mark = e.target.closest('.kt-m');
+      openVerseSheet(pos.b, pos.c, +verse.dataset.v, { root: true, focus: mark ? +mark.dataset.n : null });
+    });
     $('#l-stack').onclick = () => { settings.layout = 'stack'; saveSettings(); fillReader(bi, c, null, prev, next); };
     $('#l-cols').onclick = () => { settings.layout = 'cols'; saveSettings(); fillReader(bi, c, null, prev, next); };
     $('#s-down').onclick = () => { settings.size = Math.max(14, settings.size - 1); saveSettings(); applySize(); };
@@ -187,10 +205,10 @@ function syncReaderControls() {
   const both = settings.sv && settings.orig;
   const cols = both && settings.layout === 'cols';
   const set = (id, on) => { const el = $('#' + id); if (el) el.setAttribute('aria-pressed', on ? 'true' : 'false'); };
-  set('t-sv', settings.sv); set('t-orig', settings.orig);
+  set('t-sv', settings.sv); set('t-orig', settings.orig); set('t-kt', settings.marks);
   set('l-stack', !cols); set('l-cols', cols);
   $('#l-cols').disabled = !both;
-  ['t-sv', 't-orig'].forEach(id => {
+  ['t-sv', 't-orig', 't-kt'].forEach(id => {
     const el = $('#' + id); const on = el.getAttribute('aria-pressed') === 'true';
     el.innerHTML = (on ? ICON.check : '') + el.textContent.trim();
   });
@@ -201,6 +219,7 @@ async function fillReader(bi, c, target, prev, next, resetScroll) {
   const box = $('#reader');
   const book = BOOKS[bi];
   const kind = origKind(bi);
+  if (!KT[bi]) ensureNotes(bi).then(() => { if (pos.b === bi && pos.c === c && settings.marks && $('#reader')) draw(!ORIG[kind]); }).catch(() => {});
   if (settings.orig && !ORIG[kind]) {
     if (!settings.sv) box.innerHTML = '<p class="loading">Grondtekst laden…</p>';
     else draw(true);
@@ -223,7 +242,7 @@ async function fillReader(bi, c, target, prev, next, resetScroll) {
       verses.forEach((t, i) => {
         const v = i + 1;
         let body = '';
-        if (settings.sv) body += `<p class="t-sv" lang="nl">${esc(t)}</p>`;
+        if (settings.sv) body += `<p class="t-sv" lang="nl">${svHTML(bi, c, v, t)}</p>`;
         if (settings.orig && !origPending) {
           const o = origFor(bi, c, v);
           if (o) {
@@ -231,9 +250,11 @@ async function fillReader(bi, c, target, prev, next, resetScroll) {
             body += `<p class="t-orig${settings.sv ? '' : ' solo'}" lang="${lang}"${dir}>${tag}${esc(o.text)}</p>`;
           } else if (cols) body += '<p class="t-orig"></p>';
         }
-        html += `<div class="verse${v === target ? ' target' : ''}" id="v${v}"><span class="vnum">${v}</span><div class="vbody${cols ? ' cols' : ''}">${body}</div></div>`;
+        html += `<div class="verse${v === target ? ' target' : ''}" id="v${v}" data-v="${v}"><span class="vnum">${v}</span><div class="vbody${cols ? ' cols' : ''}">${body}</div></div>`;
       });
     }
+    const done = isRead(bi, c);
+    html += `<button class="read-btn${done ? ' done' : ''}" aria-pressed="${done}">${ICON.check}${done ? 'Gelezen' : 'Markeer als gelezen'}</button>`;
     html += '<nav class="chap-nav" aria-label="Hoofdstukken">' +
       (prev ? `<a href="${readHref(prev.b, prev.c)}">${ICON.left}${esc(BOOKS[prev.b].abbr)} ${prev.c}</a>` : '') +
       (next ? `<a class="next" href="${readHref(next.b, next.c)}">${esc(BOOKS[next.b].abbr)} ${next.c}${ICON.right}</a>` : '') +
@@ -324,7 +345,8 @@ function fillBrowse() {
     <div class="grid6" id="chapters" style="margin-top:10px">`;
   for (let c = 1; c <= n; c++) {
     const cur = browse.b === pos.b && c === pos.c;
-    html += `<a class="cell" href="${readHref(browse.b, c)}" aria-label="${esc(book.name)} ${c}"${cur ? ' aria-current="page"' : ''}>${c}</a>`;
+    const rd = isRead(browse.b, c);
+    html += `<a class="cell${rd ? ' read' : ''}" href="${readHref(browse.b, c)}" aria-label="${esc(book.name)} ${c}${rd ? ', gelezen' : ''}"${cur ? ' aria-current="page"' : ''}>${c}</a>`;
   }
   html += '</div></section>';
   const box = $('#browse');
