@@ -12,6 +12,7 @@ Een kleine webapp (PWA) om de **Statenvertaling** te lezen en te doorzoeken naas
 - **Markeren en notities**: geef een vers een van 10 kleuren en schrijf er een notitie bij, met #thema's om te groeperen. Te zien in de leestekst (aan/uit met de knop Markeringen) en in de tab Mijn, met filters op kleur, notitie en thema.
 - **Kanttekeningen**: alle kanttekeningen van de Statenvertaling, met onderstreepte trefwoorden in de tekst. Tik op een vers of lettertje voor het verspaneel. Verwijzingen zijn aan te tikken en openen een nieuw paneel; met het kruimelpad ga je terug.
 - **Woorden**: in het verspaneel tik je op een woord in de SV of de grondtekst. Je ziet het Griekse of Hebreeuwse woord, de grondvorm, de grammatica in het Nederlands, hoe de SV het woord elders vertaalt, de betekenis uit Strong's woordenboek en alle verzen waar het voorkomt.
+- **Kerkvaders**: in het verspaneel staat bij veel verzen uitleg van Augustinus en Johannes Chrysostomus (Engels), met de bron, een vertaallink en "Vraag Claude" voor een Nederlandse vertaling met uitleg.
 - **Uitleg online**: per hoofdstuk direct naar King Comments en Matthew Henry.
 - **Vraag Claude**: opent Claude met het vers in SV en grondtekst en een vraag naar keuze (letterlijke vertaling, afwijkingen, moeilijke woorden of een eigen vraag).
 - **Voortgang** (tab Mijn): hoofdstukken afvinken, overzicht per boek, en aanbevelingen op basis van de verwijzingen in de kanttekeningen bij wat je las. Met back-up en terugzetten; markeringen en notities gaan daarin mee.
@@ -40,10 +41,11 @@ Zonder ophogen van `VERSION` blijft de app de oude bestanden uit de cache gebrui
 | Strong-nummers bij de SV-woorden | [jajpater/statenvertaling](https://github.com/jajpater/statenvertaling) | CC0 |
 | Grammatica Grieks / Hebreeuws | Textus Receptus-data hierboven; morfologie van de Open Scriptures Hebrew Bible | Vrij / CC BY 4.0 |
 | Woordenboek (Strong, 1890/1894) | [openscriptures/strongs](https://github.com/openscriptures/strongs) | CC BY-SA; `data/lex-*.json` valt daardoor ook onder CC BY-SA |
+| Kerkvaders per vers (Augustinus, Chrysostomus) | [HistoricalChristianFaith/Commentaries-Database](https://github.com/HistoricalChristianFaith/Commentaries-Database) | Publiek domein; alleen citaten met een bron-URL zijn opgenomen. Engelse vertalingen, deels 19e-eeuws (NPNF), deels machinevertaling door historicalchristian.faith |
 | Lettertypen Noto Serif en Noto Serif Hebrew | Google Fonts, via Fontsource | SIL Open Font License 1.1 |
 
 Het Hebreeuws wordt getoond met klinkertekens, zonder cantillatietekens. Hoe de data is gemaakt staat in [`tools/`](tools/README.md).
 
 ## Techniek
 
-Gewone HTML, CSS en JavaScript, zonder framework of build-stap. `sw.js` slaat bij installatie alle bestanden op (ongeveer 32 MB, ingepakt zo'n 9 MB).
+Gewone HTML, CSS en JavaScript, zonder framework of build-stap. `sw.js` slaat bij installatie alle bestanden op (ongeveer 32 MB, ingepakt zo'n 9 MB). De kerkvaders (18 MB) worden per boek geladen zodra je ze opent en daarna ook offline bewaard.

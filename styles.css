@@ -347,3 +347,18 @@ mark{background:var(--mark);color:inherit;padding:0 2px;border-radius:3px}
 .mine.open .mine-sum > svg{transform:rotate(180deg)}
 .mine-ico svg{width:18px;height:18px;color:var(--accent)}
 .mine-body{display:flex;flex-direction:column;gap:8px;padding:2px 14px 12px}
+
+/* ---------- Kerkvaders ---------- */
+.seg3 button{padding:0 4px}
+.cf-n{color:var(--accent);font-weight:700}
+.cf-father{margin-top:10px}
+.cf{display:flex;flex-direction:column;gap:8px;padding:14px 16px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.cf-src{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px;font-size:13px}
+.cf-src a{font-weight:600;text-decoration:none}
+.cf-src span{color:var(--muted-2)}
+.cf-q{font-family:var(--serif);font-size:15px;line-height:1.6;max-height:10.5em;overflow:hidden;-webkit-mask-image:linear-gradient(#000 70%,transparent);mask-image:linear-gradient(#000 70%,transparent)}
+.cf-q.open{max-height:none;-webkit-mask-image:none;mask-image:none}
+.cf-q p{margin:0 0 .6em}.cf-q p:last-child{margin-bottom:0}
+.cf-more{align-self:flex-start;min-height:36px;padding:0;border:0;background:none;color:var(--accent);font-size:14px;font-weight:600}
+.cf-act{display:flex;gap:8px}
+.cf-act .btn{flex:1;min-height:44px;font-size:14px}

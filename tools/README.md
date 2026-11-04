@@ -9,12 +9,14 @@ git clone --depth 1 --filter=blob:none --no-checkout https://github.com/honza/te
 (cd htr && git checkout HEAD -- data/gnt.nested.json)
 git clone --depth 1 https://github.com/jajpater/statenvertaling stv
 git clone --depth 1 https://github.com/openscriptures/strongs strongs
+git clone --depth 1 https://github.com/HistoricalChristianFaith/Commentaries-Database cdb
 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/scrollmapper/bible_databases sm
 (cd sm && git checkout HEAD -- formats/json/DutSVV.json formats/json/DutSVVA.json)
 cd ..
 python3 svbuild.py      # SV in de eigen SV-versindeling (duurt ~1 min)
 python3 build_data.py   # schrijft ../data/*.json
 python3 build_notes.py  # kanttekeningen: ../data/kt/*.json en ../data/refgraph.json
+python3 build_fathers.py # kerkvaders: ../data/cf/*.json en ../data/cf-index.json
 python3 build_words.py  # woordinfo: ../data/w/*.json, ../data/lex-g.json, ../data/lex-h.json, ../data/gram.json
 ```
 

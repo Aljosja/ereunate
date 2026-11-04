@@ -1,10 +1,10 @@
 /* Service worker: alles wordt bij installatie opgeslagen, zodat de app offline werkt.
    Bij elke nieuwe release VERSION ophogen; de app biedt dan "Vernieuwen" aan. */
-const VERSION = 'v1.3.2';
+const VERSION = 'v1.4.0';
 const CACHE = 'ereunate-' + VERSION;
 const FILES = [
   './', 'index.html', 'styles.css', 'app.js', 'features.js', 'manifest.webmanifest',
-  'data/books.json', 'data/map.json', 'data/sv.json', 'data/grc.json', 'data/heb.json', 'data/refgraph.json', 'data/lex-g.json', 'data/lex-h.json', 'data/gram.json',
+  'data/books.json', 'data/map.json', 'data/sv.json', 'data/grc.json', 'data/heb.json', 'data/refgraph.json', 'data/lex-g.json', 'data/lex-h.json', 'data/gram.json', 'data/cf-index.json',
   'fonts/noto-serif-latin-400-normal.woff2', 'fonts/noto-serif-latin-ext-400-normal.woff2',
   'fonts/noto-serif-greek-400-normal.woff2', 'fonts/noto-serif-greek-ext-400-normal.woff2',
   'fonts/noto-serif-latin-600-normal.woff2', 'fonts/noto-serif-latin-ext-600-normal.woff2',

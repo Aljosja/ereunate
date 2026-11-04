@@ -211,22 +211,31 @@ function fillVerseSheet(el, bi, ref, opt) {
   const ktHTML = html;
   const single = verses.length === 1;
   const body = el.querySelector('.sh-body');
-  let tab = single && opt.tab === 'w' ? 'w' : 'kt';
+  let tab = single && ['w', 'cf'].includes(opt.tab) ? opt.tab : 'kt';
   let tabc = body;
   if (single) {
     const [sc, sv_] = verses[0];
     body.innerHTML = versesHTML + mineHTML(bi, sc, sv_) +
       `<div class="sh-tabs"><div class="seg" role="tablist" aria-label="Over dit vers">
-        <button role="tab" data-tab="kt">Kanttekeningen</button><button role="tab" data-tab="w">Woorden</button></div></div>
+        <button role="tab" data-tab="kt">Kanttekeningen</button><button role="tab" data-tab="w">Woorden</button><button role="tab" data-tab="cf">Kerkvaders<span class="cf-n"></span></button></div></div>
       <div class="tabc"></div>`;
+    body.querySelector('.sh-tabs .seg').classList.add('seg3');
+    ensureCfIndex().then(ix => {
+      const has = ix && ix.v[bi] && ix.v[bi][sc] && ix.v[bi][sc].includes(sv_);
+      const n = body.querySelector('.cf-n'); if (n && has) n.textContent = ' •';
+    }).catch(() => {});
     wireMine(body, bi, sc, sv_);
     tabc = body.querySelector('.tabc');
     body.querySelector('.sh-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b && b.dataset.tab !== tab) { tab = b.dataset.tab; showTab(true); } };
   }
   function showTab(switched) {
-    const mineSec = body.querySelector('.mine'); if (mineSec) mineSec.hidden = tab === 'w';
+    const mineSec = body.querySelector('.mine'); if (mineSec) mineSec.hidden = tab !== 'kt';
     el.querySelectorAll('[data-tab]').forEach(b => { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); b.setAttribute('aria-pressed', String(b.dataset.tab === tab)); });
     if (tab === 'kt') { tabc.innerHTML = ktHTML; }
+    else if (tab === 'cf') {
+      tabc.innerHTML = '<p class="loading">Kerkvaders laden…</p>';
+      renderFathers(tabc, bi, verses[0][0], verses[0][1]).catch(() => { tabc.innerHTML = '<p class="hint">De kerkvaders konden niet worden geladen. Open dit vers één keer met internet.</p>'; });
+    }
     else {
       tabc.innerHTML = '<p class="loading">Woorden laden…</p>';
       renderWords(tabc, bi, verses[0][0], verses[0][1]).catch(() => { tabc.innerHTML = '<p class="hint">Woordinformatie kon niet worden geladen.</p>'; });
@@ -252,6 +261,8 @@ function fillVerseSheet(el, bi, ref, opt) {
     if (t.dataset.jump != null) { jumpToNote(el, +t.dataset.jump); return; }
     if (t.dataset.k != null) { selectWord(el, bi, +t.dataset.k, t); return; }
     if (t.dataset.wclaude != null) { openClaudeSheet(bi, ref, { word: el._word }); return; }
+    if (t.dataset.cfmore != null) { const q = t.closest('.cf').querySelector('.cf-q'); q.classList.toggle('open'); t.textContent = q.classList.contains('open') ? 'Minder tonen' : 'Lees verder'; return; }
+    if (t.dataset.cfclaude != null) { openClaudeSheet(bi, ref, { father: el._cf[+t.dataset.cfclaude] }); return; }
     if (t.dataset.allrefs != null) {
       const list = el.querySelector('.reflist'); list.hidden = !list.hidden;
       t.setAttribute('aria-expanded', String(!list.hidden));
@@ -385,10 +396,18 @@ const ASK_WORD = [
     q: w => `De SV vertaalt ${w.orig} hier met "${w.sv}". Waarom is daarvoor gekozen, en welke andere Nederlandse weergaven zouden mogelijk zijn?` },
   { t: 'Eigen vraag', s: 'Typ zelf wat je wilt weten', q: () => '' }
 ];
+const ASK_CF = [
+  { t: 'Vertaal en leg uit', s: 'In goed Nederlands, met korte uitleg',
+    q: (f, l) => `Vertaal dit citaat in goed, begrijpelijk Nederlands. Leg daarna kort uit wat ${f.name} hier zegt over ${l}.` },
+  { t: 'Wat betekent dit voor het vers?', s: 'Hoe deze uitleg het vers verheldert',
+    q: (f, l) => `Hoe helpt deze uitleg van ${f.name} om ${l} beter te begrijpen? Waar sluit hij aan bij de tekst en waar gaat hij verder? Antwoord in het Nederlands.` },
+  { t: 'Eigen vraag', s: 'Typ zelf wat je wilt weten', q: () => '' }
+];
 function openClaudeSheet(bi, ref, copts = {}) {
   const W = copts.word;
-  const LIST = W ? ASK_WORD : ASK;
-  const prefKey = W ? 'claudeAskW' : 'claudeAsk';
+  const F = copts.father;
+  const LIST = F ? ASK_CF : W ? ASK_WORD : ASK;
+  const prefKey = F ? 'claudeAskF' : W ? 'claudeAskW' : 'claudeAsk';
   const verses = refVerses(ref);
   const label = ref[2] ? refLabelFull(ref) : BOOKS[bi].name + ' ' + ref[1];
   const ot = BOOKS[bi].ot;
@@ -400,13 +419,17 @@ function openClaudeSheet(bi, ref, copts = {}) {
       const sv = verses.map(([c, v]) => (verses.length > 1 ? v + ' ' : '') + SV[bi][c - 1][v - 1]).join(' ');
       const orig = verses.map(([c, v]) => { const o = origFor(bi, c, v); return o ? (verses.length > 1 ? v + ' ' : '') + o.text : ''; }).filter(Boolean).join(' ');
       const src = ot ? 'de Hebreeuwse grondtekst (Westminster Leningrad Codex)' : 'de Griekse grondtekst (Textus Receptus)';
-      const intro = orig
+      let intro = orig
         ? `Hieronder staat ${label} in de Statenvertaling en in ${src}.\n\nSV: ${sv}\n\n${lang}: ${orig}\n\n`
         : `Hieronder staat ${label} in de Statenvertaling.\n\nSV: ${sv}\n\n`;
+      if (F) {
+        const qt = F.quote.length > 2600 ? F.quote.slice(0, 2600).replace(/\s+\S*$/, '') + ' …' : F.quote;
+        intro += `Citaat van ${F.name} (${F.title || 'bron onbekend'}), in Engelse vertaling:\n"${qt}"\n\n`;
+      }
       let pick = Math.min(settings[prefKey] || 0, LIST.length - 1);
       el.innerHTML = sheetHead('Vraag Claude', trail) + `
         <div class="sh-body">
-          <div class="chips" style="padding:0;margin-bottom:4px"><span class="chip small soft">${esc(label)}</span>${W ? `<span class="chip small" lang="${ot ? 'he' : 'grc'}">${esc(W.orig)}</span>` : `<span class="chip small">SV${orig ? ' + ' + lang : ''}</span>`}</div>
+          <div class="chips" style="padding:0;margin-bottom:4px"><span class="chip small soft">${esc(label)}</span>${F ? `<span class="chip small">${esc(F.name)}</span>` : W ? `<span class="chip small" lang="${ot ? 'he' : 'grc'}">${esc(W.orig)}</span>` : `<span class="chip small">SV${orig ? ' + ' + lang : ''}</span>`}</div>
           <h3 class="sh-h">Wat wil je weten?</h3>
           <div class="radios" role="radiogroup" aria-label="Wat wil je weten?">
             ${LIST.map((a, i) => `<button class="radio" role="radio" data-i="${i}"><span class="dot"></span><span><b>${a.t}</b><small>${a.s}</small></span></button>`).join('')}
@@ -426,7 +449,7 @@ function openClaudeSheet(bi, ref, copts = {}) {
         const own = pick === LIST.length - 1;
         el.querySelector('.own').hidden = !own;
         el.querySelectorAll('.radio').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.i === pick)));
-        const q = own ? (ta.value.trim() || '[typ hierboven je vraag]') : (W ? LIST[pick].q(W) : LIST[pick].q(lang));
+        const q = own ? (ta.value.trim() || '[typ hierboven je vraag]') : (F ? LIST[pick].q(F, label) : W ? LIST[pick].q(W) : LIST[pick].q(lang));
         const prompt = intro + q;
         el.querySelector('#prompt').textContent = prompt;
         el.querySelector('#go-claude').href = 'https://claude.ai/new?q=' + encodeURIComponent(prompt);
@@ -792,4 +815,35 @@ async function runSearchExtra(q, gotoCard, box) {
     const [b, c, v, i] = a.dataset.kt.split('.').map(Number);
     openVerseSheet(b, c, v, { focus: i });
   };
+}
+
+
+/* ---------- Kerkvaders ---------- */
+let CFIX = null; const CF = {};
+async function ensureCfIndex() { if (!CFIX) CFIX = await loadJSON('cf-index'); return CFIX; }
+async function renderFathers(box, bi, c, v) {
+  const ix = await ensureCfIndex();
+  const has = ix.v[bi] && ix.v[bi][c] && ix.v[bi][c].includes(v);
+  const intro = '<p class="hint">Uitleg van Augustinus en Johannes Chrysostomus bij dit vers, in het Engels. De vertalingen zijn deels 19e-eeuws en deels machinevertaling door historicalchristian.faith. Tik op <b>Vraag Claude</b> voor een Nederlandse vertaling met uitleg.</p>';
+  if (!has) { box.innerHTML = intro + '<p class="empty" style="margin:24px 8px">Bij dit vers staat (nog) niets van Augustinus of Chrysostomus. Probeer een vers in de buurt.</p>'; return; }
+  if (!CF[bi]) CF[bi] = await loadJSON('cf/' + bi);
+  const list = (CF[bi][c + ':' + v] || []).slice().sort((a, b) => a[0] - b[0]);
+  const names = ix.fathers;
+  const el = box.closest('.sheet');
+  el._cf = list.map(e => ({ name: names[e[0]], title: e[1], quote: e[2] }));
+  let last = -1;
+  box.innerHTML = intro + list.map((e, i) => {
+    const [f, title, quote, url, , rng] = e;
+    const head = f !== last ? `<h3 class="sh-h cf-father">${esc(names[f])}</h3>` : '';
+    last = f;
+    const paras = esc(quote).split(/\n\s*\n/).map(p => `<p>${p.replace(/\n/g, ' ')}</p>`).join('');
+    const long = quote.length > 520;
+    const tr = 'https://translate.google.com/?sl=en&tl=nl&op=translate&text=' + encodeURIComponent(quote.slice(0, 4500));
+    return head + `<article class="cf">
+      <div class="cf-src"><a href="${esc(url)}" target="_blank" rel="noopener">${esc(title || 'Bron')}</a>${rng ? `<span>over vers ${esc(rng)}</span>` : ''}</div>
+      <div class="cf-q${long ? '' : ' open'}" lang="en">${paras}</div>
+      ${long ? '<button class="cf-more" data-cfmore>Lees verder</button>' : ''}
+      <div class="cf-act"><button class="btn" data-cfclaude="${i}">${ICON.chat}Vraag Claude</button><a class="btn" href="${tr}" target="_blank" rel="noopener">Vertaal ${EXT}</a></div>
+    </article>`;
+  }).join('');
 }
