@@ -182,6 +182,11 @@ function fillVerseSheet(el, bi, ref, opt) {
   const allRefs = [];
   groups.forEach(g => g.notes.forEach(n => n[4].forEach(r => { if (!allRefs.some(x => x.join() === r.join())) allRefs.push(r); })));
   html += `<h3 class="sh-h">Kanttekeningen${total ? ' · ' + total : ''}</h3>`;
+  if (groups.length === 1 && total > 1) {
+    html += `<div class="ltrbar" role="group" aria-label="Spring naar kanttekening">` +
+      groups[0].notes.map((n, i) => `<button class="ltr${opt.focus === i ? ' on' : ''}" data-jump="${i}" aria-label="Kanttekening ${noteLetter(i)}${n[2] ? ': ' + esc(n[2]) : ''}">${noteLetter(i)}</button>`).join('') +
+      '</div>';
+  }
   if (!total) html += '<p class="hint">Bij dit vers staan geen kanttekeningen.</p>';
   const collapse = total > 4 && opt.focus == null;
   let shown = 0;
@@ -217,6 +222,7 @@ function fillVerseSheet(el, bi, ref, opt) {
     if (t.dataset.depth) { history.go(-(sheets.length - +t.dataset.depth)); return; }
     if (t.dataset.r) { const r = t.dataset.r.split('.').map(Number); openVerseSheet(r[0], r[1], r[2] || 1, { ref: r }); return; }
     if (t.dataset.more != null) { el.querySelectorAll('.more-note').forEach(n => (n.hidden = false)); t.remove(); return; }
+    if (t.dataset.jump != null) { jumpToNote(el, +t.dataset.jump); return; }
     if (t.dataset.allrefs != null) {
       const list = el.querySelector('.reflist'); list.hidden = !list.hidden;
       t.setAttribute('aria-expanded', String(!list.hidden));
@@ -230,10 +236,22 @@ function fillVerseSheet(el, bi, ref, opt) {
       copyText(`${refLabelFull(ref[2] ? ref : [bi, c0, v0, c0, v0])} (SV)\n${txt}`);
     }
   };
-  if (opt.focus != null) {
-    const n = el.querySelector(`.note[data-i="${opt.focus}"]`);
-    if (n) setTimeout(() => n.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 260);
-  }
+  if (opt.focus != null) setTimeout(() => jumpToNote(el, opt.focus), 260);
+}
+function jumpToNote(el, i) {
+  // ingeklapte kanttekeningen eerst tonen
+  el.querySelectorAll('.more-note').forEach(n => (n.hidden = false));
+  const more = el.querySelector('[data-more]'); if (more) more.remove();
+  el.querySelectorAll('.note.focus').forEach(n => n.classList.remove('focus'));
+  el.querySelectorAll('.ltr').forEach(b => {
+    const on = +b.dataset.jump === i;
+    b.classList.toggle('on', on);
+    if (on) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current');
+  });
+  const n = el.querySelector(`.note[data-i="${i}"]`);
+  if (!n) return;
+  n.classList.add('focus');
+  n.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); toast('Gekopieerd.'); }
