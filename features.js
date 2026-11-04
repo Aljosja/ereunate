@@ -312,7 +312,7 @@ async function renderWords(body, bi, c, v) {
   const svLine = toks.map((t, i) => keysAt[i]
     ? `<button class="wd" data-k="${keysAt[i][0]}" data-side="sv">${esc(t)}</button>` : esc(t)).join(' ');
   const oLine = ow.map((w, i) => w.k ? `<button class="wd" data-k="${w.k}" data-oi="${i}">${esc(w.w)}</button>` : esc(w.w)).join(' ');
-  body.innerHTML = `<p class="hint">Tik op een woord in de SV of het ${ot ? 'Hebreeuws' : 'Grieks'}.</p>
+  body.innerHTML = `<p class="hint">Tik op een <span class="wd-demo">blauw woord</span> in de SV of het ${ot ? 'Hebreeuws' : 'Grieks'}. De woorden in grijs hebben geen eigen woord in de grondtekst.</p>
     <div class="wbox"><p class="t-sv" lang="nl">${svLine}</p>
     <p class="t-orig" lang="${ot ? 'he' : 'grc'}"${ot ? ' dir="rtl"' : ''}>${oLine}</p></div>
     <div id="wcard"></div>`;
