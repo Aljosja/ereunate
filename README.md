@@ -10,6 +10,7 @@ Een kleine webapp (PWA) om de **Statenvertaling** te lezen en te doorzoeken naas
 - **Bladeren**: boek en hoofdstuk kiezen, of direct naar een tekstplaats (`joh 3:16`, `1 kor 13`, `ps 23`). Recent gelezen hoofdstukken staan bovenaan.
 - **Zoeken**: op woorden of een exacte zin in de SV, in de hele Bijbel, een testament of één boek. Typ Grieks of Hebreeuws om in de grondtekst te zoeken. Accenten en klinkertekens hoef je niet te typen.
 - **Kanttekeningen**: alle kanttekeningen van de Statenvertaling, met onderstreepte trefwoorden in de tekst. Tik op een vers of lettertje voor het verspaneel. Verwijzingen zijn aan te tikken en openen een nieuw paneel; met het kruimelpad ga je terug.
+- **Woorden**: in het verspaneel tik je op een woord in de SV of de grondtekst. Je ziet het Griekse of Hebreeuwse woord, de grondvorm, de grammatica in het Nederlands, hoe de SV het woord elders vertaalt, de betekenis uit Strong's woordenboek en alle verzen waar het voorkomt.
 - **Uitleg online**: per hoofdstuk direct naar King Comments en Matthew Henry.
 - **Vraag Claude**: opent Claude met het vers in SV en grondtekst en een vraag naar keuze (letterlijke vertaling, afwijkingen, moeilijke woorden of een eigen vraag).
 - **Voortgang**: hoofdstukken afvinken, overzicht per boek, en aanbevelingen op basis van de verwijzingen in de kanttekeningen bij wat je las. Met back-up en terugzetten.
@@ -35,10 +36,13 @@ Zonder ophogen van `VERSION` blijft de app de oude bestanden uit de cache gebrui
 | Hebreeuws: Westminster Leningrad Codex | [Open Scriptures Hebrew Bible](https://github.com/openscriptures/morphhb) | Tekst publiek domein |
 | Kanttekeningen en verwijzingen bij de SV | [jajpater/statenvertaling](https://github.com/jajpater/statenvertaling) | CC0 |
 | Grieks: Textus Receptus (Scrivener 1894) | [honza/textus-receptus](https://github.com/honza/textus-receptus) | Vrij te gebruiken |
+| Strong-nummers bij de SV-woorden | [jajpater/statenvertaling](https://github.com/jajpater/statenvertaling) | CC0 |
+| Grammatica Grieks / Hebreeuws | Textus Receptus-data hierboven; morfologie van de Open Scriptures Hebrew Bible | Vrij / CC BY 4.0 |
+| Woordenboek (Strong, 1890/1894) | [openscriptures/strongs](https://github.com/openscriptures/strongs) | CC BY-SA; `data/lex-*.json` valt daardoor ook onder CC BY-SA |
 | Lettertypen Noto Serif en Noto Serif Hebrew | Google Fonts, via Fontsource | SIL Open Font License 1.1 |
 
 Het Hebreeuws wordt getoond met klinkertekens, zonder cantillatietekens. Hoe de data is gemaakt staat in [`tools/`](tools/README.md).
 
 ## Techniek
 
-Gewone HTML, CSS en JavaScript, zonder framework of build-stap. `sw.js` slaat bij installatie alle bestanden op (ongeveer 21 MB, ingepakt zo'n 6 MB).
+Gewone HTML, CSS en JavaScript, zonder framework of build-stap. `sw.js` slaat bij installatie alle bestanden op (ongeveer 32 MB, ingepakt zo'n 9 MB).

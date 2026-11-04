@@ -8,13 +8,17 @@ git clone --depth 1 https://github.com/openscriptures/morphhb wlc
 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/honza/textus-receptus htr
 (cd htr && git checkout HEAD -- data/gnt.nested.json)
 git clone --depth 1 https://github.com/jajpater/statenvertaling stv
+git clone --depth 1 https://github.com/openscriptures/strongs strongs
 git clone --depth 1 --filter=blob:none --no-checkout https://github.com/scrollmapper/bible_databases sm
 (cd sm && git checkout HEAD -- formats/json/DutSVV.json formats/json/DutSVVA.json)
 cd ..
 python3 svbuild.py      # SV in de eigen SV-versindeling (duurt ~1 min)
 python3 build_data.py   # schrijft ../data/*.json
 python3 build_notes.py  # kanttekeningen: ../data/kt/*.json en ../data/refgraph.json
+python3 build_words.py  # woordinfo: ../data/w/*.json, ../data/lex-g.json, ../data/lex-h.json, ../data/gram.json
 ```
+
+**Woorden.** De Strong-nummers staan in de bron bij de SV-woorden. `build_words.py` legt die over de SV-tekst van de app (lidwoorden en dergelijke hebben meestal geen nummer). Grieks: Strong-nummer en grammaticacode per woord uit de Textus Receptus-data. Hebreeuws: lemma en morfologie uit de OSHB. De grammaticacodes worden bij het bouwen naar Nederlandse omschrijvingen vertaald.
 
 **Kanttekeningen.** In de bron staan de kanttekeningen achter elk vers, met een trefwoord. `build_notes.py` zoekt dat trefwoord op in de SV-tekst van de app (99% wordt gevonden) en zet de verwijzingen om naar de boeknummers van de app.
 

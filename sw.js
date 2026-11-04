@@ -1,10 +1,10 @@
 /* Service worker: alles wordt bij installatie opgeslagen, zodat de app offline werkt.
    Bij elke nieuwe release VERSION ophogen; de app biedt dan "Vernieuwen" aan. */
-const VERSION = 'v1.1.2';
+const VERSION = 'v1.2.0';
 const CACHE = 'ereunate-' + VERSION;
 const FILES = [
   './', 'index.html', 'styles.css', 'app.js', 'features.js', 'manifest.webmanifest',
-  'data/books.json', 'data/map.json', 'data/sv.json', 'data/grc.json', 'data/heb.json', 'data/refgraph.json',
+  'data/books.json', 'data/map.json', 'data/sv.json', 'data/grc.json', 'data/heb.json', 'data/refgraph.json', 'data/lex-g.json', 'data/lex-h.json', 'data/gram.json',
   'fonts/noto-serif-latin-400-normal.woff2', 'fonts/noto-serif-latin-ext-400-normal.woff2',
   'fonts/noto-serif-greek-400-normal.woff2', 'fonts/noto-serif-greek-ext-400-normal.woff2',
   'fonts/noto-serif-latin-600-normal.woff2', 'fonts/noto-serif-latin-ext-600-normal.woff2',
@@ -12,7 +12,8 @@ const FILES = [
   'fonts/noto-serif-hebrew-hebrew-400-normal.woff2',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
   'icons/apple-touch-icon.png', 'icons/favicon-32.png',
-  ...Array.from({ length: 66 }, (_, i) => `data/kt/${i}.json`)
+  ...Array.from({ length: 66 }, (_, i) => `data/kt/${i}.json`),
+  ...Array.from({ length: 66 }, (_, i) => `data/w/${i}.json`)
 ];
 
 self.addEventListener('install', e => {

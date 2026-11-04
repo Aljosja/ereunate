@@ -207,7 +207,26 @@ function fillVerseSheet(el, bi, ref, opt) {
       }).join('')}</div>`;
   }
   html += uitlegHTML(bi, firstC);
-  el.querySelector('.sh-body').innerHTML = html;
+  const ktHTML = html;
+  const single = verses.length === 1;
+  const body = el.querySelector('.sh-body');
+  let tab = single && opt.tab === 'w' ? 'w' : 'kt';
+  if (single) {
+    const tabs = document.createElement('div');
+    tabs.className = 'sh-tabs';
+    tabs.innerHTML = `<div class="seg" role="tablist" aria-label="Over dit vers">
+      <button role="tab" data-tab="kt">Kanttekeningen</button><button role="tab" data-tab="w">Woorden</button></div>`;
+    body.before(tabs);
+    tabs.onclick = e => { const b = e.target.closest('[data-tab]'); if (b && b.dataset.tab !== tab) { tab = b.dataset.tab; showTab(); } };
+  }
+  const showTab = () => {
+    el.querySelectorAll('[data-tab]').forEach(b => { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); b.setAttribute('aria-pressed', String(b.dataset.tab === tab)); });
+    body.scrollTop = 0;
+    if (tab === 'kt') { body.innerHTML = ktHTML; return; }
+    body.innerHTML = '<p class="loading">Woorden laden…</p>';
+    renderWords(body, bi, verses[0][0], verses[0][1]).catch(() => { body.innerHTML = '<p class="hint">Woordinformatie kon niet worden geladen.</p>'; });
+  };
+  showTab();
 
   const [c0, v0] = verses[0];
   const foot = el.querySelector('.sh-foot');
@@ -223,6 +242,8 @@ function fillVerseSheet(el, bi, ref, opt) {
     if (t.dataset.r) { const r = t.dataset.r.split('.').map(Number); openVerseSheet(r[0], r[1], r[2] || 1, { ref: r }); return; }
     if (t.dataset.more != null) { el.querySelectorAll('.more-note').forEach(n => (n.hidden = false)); t.remove(); return; }
     if (t.dataset.jump != null) { jumpToNote(el, +t.dataset.jump); return; }
+    if (t.dataset.k != null) { selectWord(el, bi, +t.dataset.k, t); return; }
+    if (t.dataset.wclaude != null) { openClaudeSheet(bi, ref, { word: el._word }); return; }
     if (t.dataset.allrefs != null) {
       const list = el.querySelector('.reflist'); list.hidden = !list.hidden;
       t.setAttribute('aria-expanded', String(!list.hidden));
@@ -253,6 +274,86 @@ function jumpToNote(el, i) {
   n.classList.add('focus');
   n.scrollIntoView({ block: 'start', behavior: 'smooth' });
 }
+/* ---------- Woorden ---------- */
+const WD = {}; let LEX = { G: null, H: null }, GRAM = null;
+function ensureWords(bi) { return WD[bi] ? Promise.resolve(WD[bi]) : loadJSON('w/' + bi).then(d => (WD[bi] = d)); }
+async function ensureLex(lang) { if (!LEX[lang]) LEX[lang] = await loadJSON('lex-' + lang.toLowerCase()); return LEX[lang]; }
+async function ensureGram() { if (!GRAM) GRAM = await loadJSON('gram'); return GRAM; }
+function hebTokens(t) {
+  return t.split(/[\s\u05BE]+/).map(x => x.replace(/[\u05C3\u05C0]/g, '')).filter(x => /[\u05D0-\u05EA]/.test(x));
+}
+function strongLabel(ot, k) { return k > 0 ? (ot ? 'H' : 'G') + k : ''; }
+async function origWords(bi, c, v) {
+  const ot = BOOKS[bi].ot;
+  const W = await ensureWords(bi);
+  await ensureOrig(ot ? 'heb' : 'grc');
+  const own = c + ':' + v;
+  const refs = (MAP[bi] && MAP[bi][own]) || [own];
+  const out = [];
+  refs.forEach(r => {
+    const [oc, ov] = r.split(':').map(Number);
+    let f = W.o[oc - 1] && W.o[oc - 1][ov - 1];
+    if (!f) return;
+    let surf = null;
+    if (typeof f[f.length - 1] === 'string') { surf = f[f.length - 1].split('|'); f = f.slice(0, -1); }
+    const text = ORIG[ot ? 'heb' : 'grc'][bi][oc - 1][ov - 1] || '';
+    const toks = surf || (ot ? hebTokens(text) : text.split(' '));
+    for (let i = 0; i < f.length / 2; i++) out.push({ w: toks[i] || '', k: f[2 * i], g: f[2 * i + 1] });
+  });
+  return out;
+}
+async function renderWords(body, bi, c, v) {
+  const ot = BOOKS[bi].ot;
+  const [W, ow] = await Promise.all([ensureWords(bi), origWords(bi, c, v), ensureLex(ot ? 'H' : 'G'), ensureGram()]);
+  const toks = SV[bi][c - 1][v - 1].split(' ');
+  const flat = (W.s[c - 1] && W.s[c - 1][v - 1]) || [];
+  const keysAt = {};
+  for (let i = 0; i < flat.length; i += 2) (keysAt[flat[i]] = keysAt[flat[i]] || []).push(flat[i + 1]);
+  const svLine = toks.map((t, i) => keysAt[i]
+    ? `<button class="wd" data-k="${keysAt[i][0]}" data-side="sv">${esc(t)}</button>` : esc(t)).join(' ');
+  const oLine = ow.map((w, i) => w.k ? `<button class="wd" data-k="${w.k}" data-oi="${i}">${esc(w.w)}</button>` : esc(w.w)).join(' ');
+  body.innerHTML = `<p class="hint">Tik op een woord in de SV of het ${ot ? 'Hebreeuws' : 'Grieks'}.</p>
+    <div class="wbox"><p class="t-sv" lang="nl">${svLine}</p>
+    <p class="t-orig" lang="${ot ? 'he' : 'grc'}"${ot ? ' dir="rtl"' : ''}>${oLine}</p></div>
+    <div id="wcard"></div>`;
+  body._ow = ow;
+}
+function selectWord(el, bi, k, btn) {
+  const ot = BOOKS[bi].ot;
+  const body = el.querySelector('.sh-body');
+  const ow = body._ow || [];
+  el.querySelectorAll('.wd.sel').forEach(b => b.classList.remove('sel'));
+  el.querySelectorAll(`.wd[data-k="${k}"]`).forEach(b => b.classList.add('sel'));
+  const lang = ot ? 'H' : 'G';
+  const L = LEX[lang] && LEX[lang][String(k)];
+  const o = btn.dataset.oi != null ? ow[+btn.dataset.oi] : ow.find(w => w.k === k);
+  const svWords = [...el.querySelectorAll(`.wd[data-side="sv"][data-k="${k}"]`)].map(b => b.textContent.replace(/[^\p{L}\-]/gu, ''));
+  const box = el.querySelector('#wcard');
+  if (!L) { box.innerHTML = '<p class="hint">Voor dit woord is geen woordenboekinformatie.</p>'; return; }
+  const [lemma, tl, def, top, n, occ] = L;
+  const surface = o ? o.w.replace(/[,.;:·\u0387]/g, '') : lemma;
+  const gram = o && GRAM ? (ot ? GRAM.h : GRAM.g)[o.g] || '' : '';
+  el._word = { sv: svWords.join(' '), orig: surface, lemma, label: strongLabel(ot, k), ot };
+  let refs = '';
+  for (let i = 0; i < occ.length; i += 3) {
+    const r = [occ[i], occ[i + 1], occ[i + 2], occ[i + 1], occ[i + 2]];
+    refs += `<button class="refchip" data-r="${r.join('.')}">${esc(refText(r))}</button>`;
+  }
+  const tr = 'https://translate.google.com/?sl=en&tl=nl&op=translate&text=' + encodeURIComponent(def);
+  box.innerHTML = `<article class="wcard">
+    <div class="wc-top"><span class="wc-word" lang="${ot ? 'he' : 'grc'}"${ot ? ' dir="rtl"' : ''}>${esc(surface)}</span>${k > 0 ? `<span class="wc-num">${strongLabel(ot, k)}</span>` : ''}</div>
+    <p class="wc-line">Grondvorm <span lang="${ot ? 'he' : 'grc'}" class="wc-lemma">${esc(lemma)}</span>${tl ? ' · <i>' + esc(tl) + '</i>' : ''}</p>
+    ${gram ? `<p class="wc-line wc-gram">${esc(gram)}</p>` : ''}
+    ${top.length ? `<div class="wc-sec"><h4>Zo vertaalt de SV dit woord</h4><div class="wc-chips">${top.map(([w, c2], i) =>
+      `<span class="wchip${i === 0 ? ' first' : ''}">${esc(w)} <small>${c2}×</small></span>`).join('')}</div></div>` : ''}
+    <div class="wc-sec"><h4>Betekenis <small>(Engels, Strong)</small></h4><p lang="en" class="wc-def">${esc(def)}</p>
+      <a class="wc-link" href="${tr}" target="_blank" rel="noopener">Vertaal naar Nederlands ${EXT}</a></div>
+    ${n ? `<div class="wc-sec"><h4>Komt voor in ${n} vers${n === 1 ? '' : 'en'}${n > occ.length / 3 ? ` <small>(eerste ${occ.length / 3})</small>` : ''}</h4><div class="wc-chips">${refs}</div></div>` : ''}
+    <button class="btn primary" data-wclaude>${ICON.chat}Vraag Claude over dit woord</button>
+  </article>`;
+  body.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 async function copyText(t) {
   try { await navigator.clipboard.writeText(t); toast('Gekopieerd.'); }
   catch { toast('Kopiëren lukte niet.'); }
@@ -268,7 +369,17 @@ const ASK = [
     q: k => `Welke woorden of constructies in het ${k} laten zich lastig in het Nederlands weergeven? Leg uit wat er bij het vertalen verloren gaat of toegevoegd wordt.` },
   { t: 'Eigen vraag', s: 'Typ zelf wat je wilt weten', q: () => '' }
 ];
-function openClaudeSheet(bi, ref) {
+const ASK_WORD = [
+  { t: 'Betekenis en gebruik', s: 'Wat het woord betekent, hier en elders',
+    q: w => `Leg uit wat het ${w.ot ? 'Hebreeuwse' : 'Griekse'} woord ${w.orig} (grondvorm ${w.lemma}${w.label ? ', Strong ' + w.label : ''}) betekent, hoe het elders in de Bijbel gebruikt wordt, en wat het in dit vers betekent.` },
+  { t: 'Waarom zo vertaald?', s: 'De keuze van de SV-vertalers',
+    q: w => `De SV vertaalt ${w.orig} hier met "${w.sv}". Waarom is daarvoor gekozen, en welke andere Nederlandse weergaven zouden mogelijk zijn?` },
+  { t: 'Eigen vraag', s: 'Typ zelf wat je wilt weten', q: () => '' }
+];
+function openClaudeSheet(bi, ref, copts = {}) {
+  const W = copts.word;
+  const LIST = W ? ASK_WORD : ASK;
+  const prefKey = W ? 'claudeAskW' : 'claudeAsk';
   const verses = refVerses(ref);
   const label = ref[2] ? refLabelFull(ref) : BOOKS[bi].name + ' ' + ref[1];
   const ot = BOOKS[bi].ot;
@@ -283,13 +394,13 @@ function openClaudeSheet(bi, ref) {
       const intro = orig
         ? `Hieronder staat ${label} in de Statenvertaling en in ${src}.\n\nSV: ${sv}\n\n${lang}: ${orig}\n\n`
         : `Hieronder staat ${label} in de Statenvertaling.\n\nSV: ${sv}\n\n`;
-      let pick = Math.min(settings.claudeAsk || 0, ASK.length - 1);
+      let pick = Math.min(settings[prefKey] || 0, LIST.length - 1);
       el.innerHTML = sheetHead('Vraag Claude', trail) + `
         <div class="sh-body">
-          <div class="chips" style="padding:0;margin-bottom:4px"><span class="chip small soft">${esc(label)}</span><span class="chip small">SV${orig ? ' + ' + lang : ''}</span></div>
+          <div class="chips" style="padding:0;margin-bottom:4px"><span class="chip small soft">${esc(label)}</span>${W ? `<span class="chip small" lang="${ot ? 'he' : 'grc'}">${esc(W.orig)}</span>` : `<span class="chip small">SV${orig ? ' + ' + lang : ''}</span>`}</div>
           <h3 class="sh-h">Wat wil je weten?</h3>
           <div class="radios" role="radiogroup" aria-label="Wat wil je weten?">
-            ${ASK.map((a, i) => `<button class="radio" role="radio" data-i="${i}"><span class="dot"></span><span><b>${a.t}</b><small>${a.s}</small></span></button>`).join('')}
+            ${LIST.map((a, i) => `<button class="radio" role="radio" data-i="${i}"><span class="dot"></span><span><b>${a.t}</b><small>${a.s}</small></span></button>`).join('')}
           </div>
           <div class="own" hidden><label for="own-q" class="sh-h" style="display:block">Jouw vraag</label>
             <textarea id="own-q" rows="3" placeholder="Bijv. waarom staat er 'alzo'?"></textarea></div>
@@ -303,16 +414,16 @@ function openClaudeSheet(bi, ref) {
         <p class="sh-note">Claude opent in een nieuwe chat met deze vraag. Daarvoor is internet nodig.</p>`;
       const ta = el.querySelector('#own-q');
       const build = () => {
-        const own = pick === 3;
+        const own = pick === LIST.length - 1;
         el.querySelector('.own').hidden = !own;
         el.querySelectorAll('.radio').forEach(b => b.setAttribute('aria-checked', String(+b.dataset.i === pick)));
-        const q = own ? (ta.value.trim() || '[typ hierboven je vraag]') : ASK[pick].q(lang);
+        const q = own ? (ta.value.trim() || '[typ hierboven je vraag]') : (W ? LIST[pick].q(W) : LIST[pick].q(lang));
         const prompt = intro + q;
         el.querySelector('#prompt').textContent = prompt;
         el.querySelector('#go-claude').href = 'https://claude.ai/new?q=' + encodeURIComponent(prompt);
         return prompt;
       };
-      el.querySelectorAll('.radio').forEach(b => b.onclick = () => { pick = +b.dataset.i; settings.claudeAsk = pick; saveSettings(); build(); if (pick === 3) ta.focus(); });
+      el.querySelectorAll('.radio').forEach(b => b.onclick = () => { pick = +b.dataset.i; settings[prefKey] = pick; saveSettings(); build(); if (pick === LIST.length - 1) ta.focus(); });
       ta.oninput = build;
       el.querySelector('#copy-q').onclick = () => copyText(build());
       el.querySelector('[data-close]').onclick = () => closeAll();
