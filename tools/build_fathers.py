@@ -105,12 +105,12 @@ index = {}
 for bi, verses in out.items():
     with open(os.path.join(OUT, 'cf', f'{bi}.json'), 'w', encoding='utf-8') as fh:
         json.dump(verses, fh, ensure_ascii=False, separators=(',', ':'))
-    # per hoofdstuk: welke verzen hebben iets (voor het bolletje in de leestekst)
+    # per hoofdstuk: aantal citaten per vers (voor de aantallen in de actiebalk en de tab)
     idx = {}
     for k, lst in verses.items():
         c, v = k.split(':')
-        idx.setdefault(c, []).append(int(v))
-    index[bi] = {c: sorted(set(vs)) for c, vs in idx.items()}
+        idx.setdefault(c, {})[v] = len(lst)
+    index[bi] = idx
 with open(os.path.join(OUT, 'cf-index.json'), 'w', encoding='utf-8') as fh:
     json.dump({'fathers': [n for _, n in FATHERS], 'v': index}, fh, separators=(',', ':'))
 print(stats, 'boeken', len(out))

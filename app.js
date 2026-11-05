@@ -48,7 +48,11 @@ const ICON = {
   copy: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>',
   dl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11"/><path d="m7 10 5 5 5-5"/><path d="M5 20h14"/></svg>',
   up: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20V9"/><path d="m7 14 5-5 5 5"/><path d="M5 4h14"/></svg>',
-  pen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>'
+  pen: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>',
+  bulb: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>',
+  doc: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h12l4 4v12H4z"/><path d="M8 10h8M8 14h8M8 18h5"/></svg>',
+  cross: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M7 8h10"/></svg>',
+  filter: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4"/></svg>'
 };
 const bookById = id => BOOKS.findIndex(b => b.id.toLowerCase() === String(id || '').toLowerCase());
 const readHref = (bi, c, v) => '#/lezen/' + BOOKS[bi].id + '/' + c + (v ? '/' + v : '');
@@ -108,6 +112,7 @@ function setTab(name) {
 }
 function route() {
   const r = parseHash();
+  if (typeof closeVerseBar === 'function') closeVerseBar(true);
   if (r.view === 'bladeren') renderBrowse();
   else if (r.view === 'zoeken') renderSearch(r);
   else if (r.view === 'voortgang') renderProgress();
@@ -158,48 +163,29 @@ function renderRead(r) {
   if (!sameChapter) {
     view.dataset.view = 'lezen';
     view.innerHTML = `
-      <header class="top">
+      <header class="top rtop">
         <div class="bar">
           <a class="title-btn" href="#/bladeren" aria-label="${esc(book.name)} ${c}, kies boek of hoofdstuk"><span>${esc(book.name)} ${c}</span>${ICON.down}</a>
           <a class="icon-btn" ${prev ? `href="${readHref(prev.b, prev.c)}"` : 'aria-disabled="true"'} aria-label="Vorig hoofdstuk">${ICON.left}</a>
           <a class="icon-btn" ${next ? `href="${readHref(next.b, next.c)}"` : 'aria-disabled="true"'} aria-label="Volgend hoofdstuk">${ICON.right}</a>
-        </div>
-        <div class="hdr-body" style="padding-top:2px">
-          <div class="chips" role="group" aria-label="Teksten tonen">
-            <button class="chip small" id="t-sv">SV</button>
-            <button class="chip small" id="t-orig">${kindName}</button>
-            <button class="chip small" id="t-kt">Kanttekeningen</button>
-            <button class="chip small" id="t-my">Markeringen</button>
-          </div>
-          <div class="toolrow" style="padding:0">
-            <div class="seg" role="group" aria-label="Indeling">
-              <button id="l-stack">Onder elkaar</button>
-              <button id="l-cols">Naast elkaar</button>
-            </div>
-            <button class="size-btn sm" id="s-down" aria-label="Kleinere tekst">A</button>
-            <button class="size-btn lg" id="s-up" aria-label="Grotere tekst">A</button>
-          </div>
+          <button class="aa-btn" id="aa" aria-label="Weergave: teksten, indeling en tekstgrootte">Aa</button>
         </div>
       </header>
       <main class="scroll" id="reader-scroll"><div class="reader" id="reader"></div></main>`;
-    $('#t-sv').onclick = () => { settings.sv = !settings.sv; saveSettings(); fillReader(bi, c, null, prev, next); };
-    $('#t-orig').onclick = () => { settings.orig = !settings.orig; saveSettings(); fillReader(bi, c, null, prev, next); };
-    $('#t-kt').onclick = () => { settings.marks = !settings.marks; saveSettings(); fillReader(bi, c, null, prev, next); };
-    $('#t-my').onclick = () => { settings.mine = !settings.mine; saveSettings(); fillReader(bi, c, null, prev, next); };
+    $('#aa').onclick = () => openWeergave(kindName);
     $('#reader').addEventListener('click', e => {
       if (e.target.closest('a')) return;
+      if (e.target.closest('[data-tip-close]')) { store.set('tipVerse', true); const t = $('.tip'); if (t) t.remove(); return; }
       const rb = e.target.closest('.read-btn');
       if (rb) { toggleRead(pos.b, pos.c); fillReader(pos.b, pos.c, null, prev, next); return; }
       const verse = e.target.closest('.verse');
-      if (!verse) return;
+      if (!verse) { closeVerseBar(); return; }
       if (String(window.getSelection && window.getSelection()).length > 0) return;   // tekst selecteren
       const mark = e.target.closest('.kt-m');
-      openVerseSheet(pos.b, pos.c, +verse.dataset.v, { root: true, focus: mark ? +mark.dataset.n : null });
+      if (mark) { closeVerseBar(); openVerseSheet(pos.b, pos.c, +verse.dataset.v, { root: true, tab: 'kt', focus: +mark.dataset.n }); return; }
+      if (!store.get('tipVerse', false)) { store.set('tipVerse', true); const t = $('.tip'); if (t) t.remove(); }
+      toggleVerseBar(pos.b, pos.c, +verse.dataset.v);
     });
-    $('#l-stack').onclick = () => { settings.layout = 'stack'; saveSettings(); fillReader(bi, c, null, prev, next); };
-    $('#l-cols').onclick = () => { settings.layout = 'cols'; saveSettings(); fillReader(bi, c, null, prev, next); };
-    $('#s-down').onclick = () => { settings.size = Math.max(14, settings.size - 1); saveSettings(); applySize(); };
-    $('#s-up').onclick = () => { settings.size = Math.min(28, settings.size + 1); saveSettings(); applySize(); };
     addSwipe($('#reader-scroll'), prev, next);
   }
   redrawReader = () => { if (view.dataset.view === 'lezen' && pos.b === bi && pos.c === c) fillReader(bi, c, null, prev, next); };
@@ -208,21 +194,8 @@ function renderRead(r) {
 let redrawReader = null;
 
 function syncReaderControls() {
-  const both = settings.sv && settings.orig;
-  const cols = both && settings.layout === 'cols';
-  const set = (id, on) => { const el = $('#' + id); if (el) el.setAttribute('aria-pressed', on ? 'true' : 'false'); };
-  set('t-sv', settings.sv); set('t-orig', settings.orig); set('t-kt', settings.marks); set('t-my', settings.mine);
-  set('l-stack', !cols); set('l-cols', cols);
-  $('#l-cols').disabled = !both;
-  const row = $('.top .chips');
-  if (row && !row.dataset.fade) {
-    row.dataset.fade = '1';
-    const upd = () => row.classList.toggle('more-right', row.scrollLeft + row.clientWidth < row.scrollWidth - 4);
-    row.addEventListener('scroll', upd, { passive: true });
-    window.addEventListener('resize', upd);
-    requestAnimationFrame(upd);
-  }
-
+  const aa = $('#aa');
+  if (aa) aa.classList.toggle('changed', !(settings.sv && settings.orig && settings.marks && settings.mine));
 }
 
 async function fillReader(bi, c, target, prev, next, resetScroll) {
@@ -248,7 +221,7 @@ async function fillReader(bi, c, target, prev, next, resetScroll) {
     const verses = SV[bi][c - 1];
     let html = '';
     if (!settings.sv && !settings.orig) {
-      html = '<p class="empty">Zet hierboven minstens één tekst aan om te lezen.</p>';
+      html = '<p class="empty">Zet via <b>Aa</b> bovenin minstens één tekst aan om te lezen.</p>';
     } else {
       verses.forEach((t, i) => {
         const v = i + 1;
@@ -262,9 +235,12 @@ async function fillReader(bi, c, target, prev, next, resetScroll) {
           } else if (cols) body += '<p class="t-orig"></p>';
         }
         const mk = settings.mine ? markFor(bi, c, v) : null;
-        if (mk && mk.note && mk.note.trim()) body += `<div class="mynote">${ICON.pen}<span><b>Mijn notitie:</b> ${myNoteHTML(mk.note)}</span></div>`;
-        html += `<div class="verse${v === target ? ' target' : ''}${mk && mk.col ? ' hl hl-' + mk.col : ''}" id="v${v}" data-v="${v}"><span class="vnum">${v}</span><div class="vbody${cols ? ' cols' : ''}">${body}</div></div>`;
+        if (mk && mk.note && mk.note.trim()) body += `<div class="mynote">${ICON.pen}<span>${myNoteHTML(mk.note.replace(/\s+/g, ' '))}</span></div>`;
+        html += `<div class="verse${verseBarSel && verseBarSel.b === bi && verseBarSel.c === c && verseBarSel.v === v ? ' sel' : ''}${v === target ? ' target' : ''}${mk && mk.col ? ' hl hl-' + mk.col : ''}" id="v${v}" data-v="${v}"><span class="vnum">${v}</span><div class="vbody${cols ? ' cols' : ''}">${body}</div></div>`;
       });
+    }
+    if (!store.get('tipVerse', false) && (settings.sv || settings.orig)) {
+      html = `<div class="tip" role="note">${ICON.bulb}<span>Tik op een vers om te markeren, kanttekeningen te lezen of woorden op te zoeken.</span><button class="icon-btn" data-tip-close aria-label="Tip sluiten">${ICON.x}</button></div>` + html;
     }
     const done = isRead(bi, c);
     html += `<button class="read-btn${done ? ' done' : ''}" aria-pressed="${done}">${ICON.check}${done ? 'Gelezen' : 'Markeer als gelezen'}</button>`;
@@ -446,63 +422,59 @@ function inScope(bi) {
 }
 
 let searchState = { q: '', hits: [], shown: 0, kind: 'sv', matcher: null };
+const SCOPES = [['all', 'Hele Bijbel'], ['ot', 'Oude Testament'], ['nt', 'Nieuwe Testament'], ['gosp', 'Evangeliën'], ['epis', 'Brieven']];
+function scopeName() {
+  const f = SCOPES.find(x => x[0] === settings.scope);
+  return f ? f[1] : (BOOKS[+settings.scope] ? BOOKS[+settings.scope].name : 'Hele Bijbel');
+}
+function filterCount() {
+  return (settings.scope !== 'all' ? 1 : 0) + (settings.exact ? 1 : 0) + (settings.wholeWords ? 0 : 1);
+}
+function searchSummary() {
+  const bits = [scopeName().replace('Hele Bijbel', 'hele Bijbel')];
+  if (settings.exact) bits.push('exacte zin');
+  else bits.push(settings.wholeWords ? 'hele woorden' : 'ook delen van woorden');
+  return bits.join(' · ');
+}
 function renderSearch(r) {
   view.dataset.view = 'zoeken';
   const q = r.params.has('q') ? r.params.get('q') : store.get('lastQuery', '');
-  const opts = [['all', 'Hele Bijbel'], ['ot', 'Oude Testament'], ['nt', 'Nieuwe Testament'], ['gosp', 'Evangeliën'], ['epis', 'Brieven']];
-  let sel = opts.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
-  sel += '<optgroup label="Oude Testament">' + BOOKS.slice(0, 39).map((b, i) => `<option value="${i}">${esc(b.name)}</option>`).join('') + '</optgroup>';
-  sel += '<optgroup label="Nieuwe Testament">' + BOOKS.slice(39).map((b, i) => `<option value="${i + 39}">${esc(b.name)}</option>`).join('') + '</optgroup>';
   view.innerHTML = `
-    <header class="top">
-      <h1 class="page-title">Zoeken</h1>
-      <div class="hdr-body">
-        <form class="field" id="sform" role="search">
+    <header class="top stop">
+      <h1 class="sr-only">Zoeken</h1>
+      <div class="srow">
+        <form class="field filled" id="sform" role="search">
           ${ICON.search}
           <label for="q" class="sr-only">Zoek op woord, zin of tekstplaats</label>
           <input id="q" type="search" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search" placeholder="Woord, zin, Grieks of Hebreeuws" value="${esc(q)}">
           <button type="button" class="icon-btn" id="qclear" aria-label="Zoekterm wissen">${ICON.x}</button>
         </form>
-        <div class="seg seg3" role="group" aria-label="Zoeken in">
-          <button data-in="bible">Bijbel</button><button data-in="kt">Kanttekeningen</button><button data-in="mine">Mijn notities</button>
-        </div>
-        <div class="chips" role="group" aria-label="Zoekopties">
-          <span class="chip-select"><span id="scope-label" aria-hidden="true"></span>${ICON.down}<label for="scope" class="sr-only">Zoeken in</label><select id="scope">${sel}</select></span>
-          <button class="chip small" id="o-whole">Hele woorden</button>
-          <button class="chip small" id="o-exact">Exacte zin</button>
-          <button class="chip small" id="o-orig">Grondtekst tonen</button>
-        </div>
+        <button class="fbtn" id="fbtn">${ICON.filter}<span class="badge" id="fcount" hidden></span></button>
+      </div>
+      <div class="utabs stabs" role="tablist" aria-label="Zoeken in">
+        <button role="tab" data-in="bible">Bijbel</button><button role="tab" data-in="kt">Kanttekeningen</button><button role="tab" data-in="mine">Notities</button>
       </div>
     </header>
     <main class="scroll search-page" id="sscroll"><div class="results" id="results"></div></main>`;
-  $('#scope').value = settings.scope;
-  if ($('#scope').value !== settings.scope) { settings.scope = 'all'; $('#scope').value = 'all'; }
-  const scopeLabel = () => { const s = $('#scope'); $('#scope-label').textContent = s.options[s.selectedIndex].text; };
-  scopeLabel();
   const input = $('#q');
   let timer = null;
   const go = () => runSearch(input.value);
   input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(go, 250); });
   $('#sform').addEventListener('submit', e => { e.preventDefault(); clearTimeout(timer); input.blur(); go(); });
   $('#qclear').onclick = () => { input.value = ''; go(); input.focus(); };
-  $('#scope').onchange = e => { settings.scope = e.target.value; saveSettings(); scopeLabel(); go(); };
-  const toggle = (id, key) => { $('#' + id).onclick = () => { settings[key] = !settings[key]; saveSettings(); syncSearchChips(); go(); }; };
-  toggle('o-whole', 'wholeWords'); toggle('o-exact', 'exact'); toggle('o-orig', 'showOrigInSearch');
+  $('#fbtn').onclick = () => openSearchFilters(() => { syncSearchChips(); go(); });
   document.querySelectorAll('[data-in]').forEach(b => b.onclick = () => { settings.searchIn = b.dataset.in; saveSettings(); syncSearchChips(); go(); });
   syncSearchChips();
   runSearch(q);
   if (!q) setTimeout(() => input.focus(), 50);
 }
 function syncSearchChips() {
-  document.querySelectorAll('[data-in]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.in === (settings.searchIn || 'bible'))));
-  const orig = $('#o-orig'); if (orig) orig.hidden = (settings.searchIn || 'bible') !== 'bible';
-  const inp = $('#q'); if (inp) inp.placeholder = { bible: 'Woord, zin, Grieks of Hebreeuws', kt: 'Zoek in de kanttekeningen', mine: 'Zoek in je notities en #thema\'s' }[settings.searchIn || 'bible'];
-  [['o-whole', 'wholeWords'], ['o-exact', 'exact'], ['o-orig', 'showOrigInSearch']].forEach(([id, key]) => {
-    const el = $('#' + id); if (!el) return;
-    const label = el.textContent.trim();
-    el.setAttribute('aria-pressed', settings[key] ? 'true' : 'false');
-    el.innerHTML = (settings[key] ? ICON.check : '') + label;
-  });
+  const where = settings.searchIn || 'bible';
+  document.querySelectorAll('[data-in]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.in === where)));
+  const inp = $('#q'); if (inp) inp.placeholder = { bible: 'Woord, zin, Grieks of Hebreeuws', kt: 'Zoek in de kanttekeningen', mine: 'Zoek in je notities en #thema\'s' }[where];
+  const n = filterCount(), fc = $('#fcount'), fb = $('#fbtn');
+  if (fc) { fc.textContent = n; fc.hidden = !n; }
+  if (fb) fb.setAttribute('aria-label', 'Filters' + (n ? ', ' + n + ' actief' : ''));
 }
 
 async function runSearch(q) {
@@ -538,7 +510,7 @@ async function runSearch(q) {
     if (matcher.tests.every(t => t.test(row.s))) hits.push(row);
   }
   searchState = { q, hits, shown: 0, kind, matcher };
-  box.innerHTML = gotoCard + `<p class="meta">${hits.length === 0 ? 'Geen treffers' : hits.length === 1 ? '1 vers' : hits.length.toLocaleString('nl-NL') + ' verzen'}${kind !== 'sv' ? ' in de ' + (kind === 'grc' ? 'Griekse' : 'Hebreeuwse') + ' tekst' : ''}</p>`;
+  box.innerHTML = gotoCard + `<p class="meta">${hits.length === 0 ? 'Geen treffers' : hits.length === 1 ? '1 vers' : hits.length.toLocaleString('nl-NL') + ' verzen'}${kind !== 'sv' ? ' in de ' + (kind === 'grc' ? 'Griekse' : 'Hebreeuwse') + ' tekst' : ''} · ${esc(searchSummary())}</p>`;
   $('#sscroll').scrollTop = 0;
   showMore();
 }

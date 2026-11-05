@@ -362,3 +362,119 @@ mark{background:var(--mark);color:inherit;padding:0 2px;border-radius:3px}
 .cf-more{align-self:flex-start;min-height:36px;padding:0;border:0;background:none;color:var(--accent);font-size:14px;font-weight:600}
 .cf-act{display:flex;gap:8px}
 .cf-act .btn{flex:1;min-height:44px;font-size:14px}
+
+/* =========================================================
+   Redesign v1.5 — rustiger lezen, sneller markeren
+   ========================================================= */
+.rtop{background:var(--bg);border-bottom:1px solid var(--line-soft)}
+.rtop .bar{padding:8px 6px 8px 8px;gap:0}
+.rtop .title-btn{flex:0 1 auto}
+.rtop .title-btn span{font-size:21px}
+.rtop .title-btn{margin-right:auto}
+.aa-btn{position:relative;width:48px;height:44px;margin-left:4px;border:0;border-radius:12px;background:var(--seg);color:var(--ink);font:600 17px/1 var(--serif)}
+.aa-btn.changed::after{content:"";position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:4px;background:var(--accent)}
+.reader{padding:6px 18px 24px}
+.verse{padding:10px 6px;border-bottom:0;margin:2px -6px;border-radius:12px}
+.vnum{color:var(--muted-2)}
+.verse.hl .vnum{color:var(--ink-2)}
+.verse.sel{box-shadow:inset 0 0 0 2px var(--accent)}
+.verse:not(.hl).sel{background:var(--accent-soft)}
+.t-sv{line-height:1.65}
+.kt-m{display:inline;min-width:0;height:auto;margin:0 0 0 1px;padding:0 1px;border:0;border-radius:3px;background:none;color:var(--accent);font:700 11px/1 var(--sans);vertical-align:super;cursor:pointer}
+.verse.hl .kt-m{background:none}
+@media (prefers-color-scheme:dark){.verse.hl .kt-m{background:none}}
+.mynote{align-items:center;padding:0;background:none !important;font-size:13px;color:var(--ink-2)}
+.mynote svg{margin-top:0;width:14px;height:14px}
+.mynote span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.tip{display:flex;align-items:center;gap:10px;margin:4px 0 10px;padding:6px 4px 6px 12px;border-radius:12px;background:var(--accent-soft);color:var(--accent);font-size:13px;line-height:1.4}
+.tip > svg{width:18px;height:18px}
+.tip span{flex:1}
+.tip .icon-btn{color:var(--accent);width:40px;height:40px}
+.tip .icon-btn svg{width:16px;height:16px}
+.scroll.has-bar .reader{padding-bottom:260px}
+
+/* Actiebalk */
+.vbar{position:fixed;left:10px;right:10px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:15;max-width:740px;margin:0 auto;display:flex;flex-direction:column;gap:8px;padding:8px 10px 8px;border-radius:20px;background:var(--card);border:1px solid var(--line);box-shadow:0 10px 30px rgba(22,25,31,.2);animation:vbin .16s ease-out}
+@keyframes vbin{from{transform:translateY(12px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.vbar{animation:none}}
+.vb-h{display:flex;align-items:center;gap:8px;padding-left:6px}
+.vb-h b{font-size:14px}
+.vb-h span{flex:1;font-size:13px;color:var(--muted-2)}
+.vb-h .icon-btn{width:40px;height:40px}
+.vb-h .icon-btn svg{width:18px;height:18px}
+.vb-sw{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 4px;scrollbar-width:none}
+.vb-sw::-webkit-scrollbar{display:none}
+.vb-sw .sw{flex:none;width:40px;height:40px;border-radius:20px}
+.vb-act{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:2px;padding-top:6px;border-top:1px solid var(--line-soft)}
+.vb-act button{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:54px;padding:0;border:0;border-radius:12px;background:none;color:var(--ink);font-size:11px;font-weight:500}
+.vb-act button:active{background:var(--seg)}
+.vb-act svg{width:22px;height:22px}
+.vb-act .alpha{font:600 19px/22px var(--serif)}
+.badge{display:inline-block;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--accent-strong);color:var(--on-accent);font:700 11px/18px var(--sans);text-align:center}
+.vb-act .badge{position:absolute;top:3px;right:calc(50% - 22px)}
+.vb-act .badge.dotb{min-width:8px;width:8px;height:8px;padding:0;top:6px;right:calc(50% - 15px)}
+
+/* Verspaneel */
+.sh-top .icon-btn svg{width:20px;height:20px}
+.sh-top h2{font-size:20px}
+.sh-top{padding:2px 4px 0 18px;gap:0}
+.colbtn .dot{width:24px;height:24px;border-radius:12px;border:2px solid rgba(22,25,31,.18)}
+.colbtn .dot.none{background:transparent;border:2px dashed var(--faint)}
+.mine{background:var(--page);border-radius:12px}
+.mine-sum{min-height:44px;font-size:14px}
+.mine-sum .ms-t{font-weight:500}
+.mine-sum .ms-n{color:var(--ink-2)}
+.mine-sum .ms-act{flex:none;color:var(--accent);font-weight:600;font-size:14px}
+.mine-sum .ms-act svg{width:18px;height:18px;color:var(--muted)}
+.mine-ico svg{width:16px;height:16px}
+.utabs{position:sticky;top:-10px;z-index:3;display:flex;gap:2px;margin:0 -16px;padding:0 12px;background:var(--bg);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.utabs button{flex:none;display:flex;align-items:center;gap:6px;height:46px;padding:0 10px;border:0;border-bottom:3px solid transparent;background:none;color:var(--muted-2);font-size:14px;font-weight:500;margin-bottom:-1px}
+.utabs button[aria-selected="true"]{color:var(--ink);font-weight:600;border-bottom-color:var(--accent)}
+.utabs .badge{background:var(--seg);color:var(--ink-2)}
+.utabs button[aria-selected="true"] .badge{background:var(--accent-strong);color:var(--on-accent)}
+.tabc .ltrbar{top:36px}
+.tabc .wbox{top:36px}
+.uitleg{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.uitleg summary{display:flex;align-items:center;gap:8px;min-height:52px;padding:0 14px;font-size:15px;font-weight:600;cursor:pointer;list-style:none}
+.uitleg summary::-webkit-details-marker{display:none}
+.uitleg summary small{flex:1;font-weight:400;color:var(--muted-2);font-size:13px}
+.uitleg summary svg{width:18px;height:18px;color:var(--muted);transition:transform .15s}
+.uitleg[open] summary svg{transform:rotate(180deg)}
+.uitleg .linklist{border:0;border-top:1px solid var(--line);border-radius:0}
+
+/* Weergave */
+.switches{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.switch{display:flex;align-items:center;gap:12px;min-height:58px;padding:0 14px;border:0;border-bottom:1px solid var(--line-soft);background:var(--card);text-align:left}
+.switch:last-child{border-bottom:0}
+.switch > span:first-child{flex:1;display:flex;flex-direction:column;gap:2px}
+.switch b{font-size:15px}.switch small{font-size:13px;color:var(--muted-2)}
+.track{flex:none;position:relative;width:50px;height:30px;border-radius:15px;background:var(--chip-line);transition:background .15s}
+.knob{position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:12px;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.switch[aria-checked="true"] .track{background:var(--accent-strong)}
+.switch[aria-checked="true"] .knob{left:23px}
+.sizerow{display:flex;align-items:center;gap:10px}
+.sizebar{flex:1;height:6px;border-radius:3px;background:var(--seg);overflow:hidden}
+.sizebar div{height:100%;background:var(--accent-strong)}
+.size-demo{margin:2px 4px 6px;font-family:var(--serif);line-height:1.6;color:var(--ink-2)}
+
+/* Zoeken */
+.stop{background:var(--bg)}
+.srow{display:flex;align-items:center;gap:8px;padding:10px 16px 2px}
+.field.filled{flex:1;min-width:0;height:48px;border:0;background:var(--seg)}
+.field.filled:focus-within{border:2px solid var(--accent);padding-left:12px;background:var(--card)}
+.fbtn{position:relative;flex:none;width:48px;height:48px;border:0;border-radius:14px;background:var(--seg);display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.fbtn .badge{position:absolute;top:4px;right:4px}
+.stabs{position:static;margin:0;padding:0 8px;border-bottom:0}
+.results{gap:8px;padding-top:10px}
+.results .card{gap:5px;padding:12px 14px;border:0;border-radius:12px}
+.results .card .ref{font-size:13px}
+.results .card .txt{font-size:16px;line-height:1.5}
+.results .group-h{margin-top:6px}
+.selbox{position:relative;display:flex;align-items:center}
+.selbox select{width:100%;height:50px;padding:0 40px 0 14px;border:1px solid var(--chip-line);border-radius:12px;background:var(--card);appearance:none;-webkit-appearance:none;font-size:16px}
+.selbox svg{position:absolute;right:14px;width:18px;height:18px;pointer-events:none;color:var(--muted)}
+.results .card .ref{text-decoration:none;font:600 13px/1.3 var(--sans);color:var(--accent)}
+.verse.target{animation:tgt 2.6s ease-out forwards}
+@keyframes tgt{0%,40%{background:var(--target)}100%{background:transparent}}
+.verse.hl.target{animation:none}
+@media (prefers-reduced-motion:reduce){.verse.target{animation:none}}

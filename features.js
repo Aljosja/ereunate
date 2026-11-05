@@ -11,33 +11,20 @@ function ensureNotes(bi) {
 const noteLetter = i => String.fromCharCode(97 + (i % 26)) + (i >= 26 ? String(Math.floor(i / 26)) : '');
 function notesFor(bi, c, v) { return (KT[bi] && KT[bi][c - 1] && KT[bi][c - 1][v - 1]) || null; }
 
-/* SV-tekst met onderstreepte trefwoorden en lettertjes */
+/* SV-tekst met kleine lettertjes achter de trefwoorden van de kanttekeningen */
 function svHTML(bi, c, v, text) {
   const notes = settings.marks ? notesFor(bi, c, v) : null;
   if (!notes) return esc(text);
   const toks = text.split(' ');
-  const after = {}; const ul = new Array(toks.length).fill(false);
-  let covered = -1;
+  const after = {};
   notes.forEach((n, i) => {
     const end = n[0];
     if (end < 1 || end > toks.length) return;
     (after[end - 1] = after[end - 1] || []).push(i);
-    for (let k = Math.max(end - n[1], covered + 1); k < end; k++) ul[k] = true;
-    covered = Math.max(covered, end - 1);
   });
-  let out = '', inU = false;
-  toks.forEach((t, k) => {
-    if (ul[k] && !inU) { out += '<span class="kt-u">'; inU = true; }
-    out += esc(t);
-    if (after[k]) {
-      if (inU) { out += '</span>'; inU = false; }
-      out += after[k].map(i => `<button class="kt-m" data-n="${i}" aria-label="Kanttekening ${noteLetter(i)}">${noteLetter(i)}</button>`).join('');
-    }
-    if (inU && !ul[k + 1]) { out += '</span>'; inU = false; }
-    if (k < toks.length - 1) out += ' ';
-  });
-  if (inU) out += '</span>';
-  return out;
+  return toks.map((t, k) => esc(t) + (after[k]
+    ? after[k].map(i => `<button class="kt-m" data-n="${i}" aria-label="Kanttekening ${noteLetter(i)} bij ${esc(notes[i][2] || t)}">${noteLetter(i)}</button>`).join('')
+    : '')).join(' ');
 }
 
 /* ---------- Verwijzingen ---------- */
@@ -81,11 +68,11 @@ const SLUG = ['genesis','exodus','leviticus','numbers','deuteronomy','joshua','j
 const EXT = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5"/></svg>';
 function uitlegHTML(bi, c) {
   const name = esc(BOOKS[bi].name + ' ' + c);
-  return `<h3 class="sh-h">Uitleg online</h3>
+  return `<details class="uitleg"><summary>Uitleg online<small>King Comments · Matthew Henry</small>${ICON.down}</summary>
     <div class="linklist">
       <a href="https://www.kingcomments.com/nl/bijbelstudies/${KING[bi]}/${c}" target="_blank" rel="noopener"><span><b>King Comments</b><small>${name} · kingcomments.com</small></span>${EXT}</a>
       <a href="https://www.studylight.org/commentaries/dut/mhm/${SLUG[bi]}-${c}.html" target="_blank" rel="noopener"><span><b>Matthew Henry</b><small>${name} · studylight.org</small></span>${EXT}</a>
-    </div>`;
+    </div></details>`;
 }
 
 /* ---------- Panelen (op elkaar gestapeld, met terugknop) ---------- */
@@ -111,7 +98,7 @@ function openSheet({ label, crumb, build }) {
   requestAnimationFrame(() => el.classList.add('open'));
   return s;
 }
-function sheetHead(title, trail) {
+function sheetHead(title, trail, extra = '') {
   const crumbs = trail.length > 1
     ? `<nav class="crumbs" aria-label="Gevolgde weg"><button class="icon-btn" data-back="1" aria-label="Terug naar ${esc(trail[trail.length - 2])}">${ICON.left}</button>` +
       trail.map((t, i) => i === trail.length - 1
@@ -119,7 +106,7 @@ function sheetHead(title, trail) {
         : `<button class="crumb" data-depth="${i + 1}">${esc(t)}</button>${ICON.right}`).join('') + '</nav>'
     : '';
   return `<div class="grip" aria-hidden="true"></div>${crumbs}
-    <div class="sh-top"><h2>${esc(title)}</h2><button class="icon-btn" data-close aria-label="Sluiten">${ICON.x}</button></div>`;
+    <div class="sh-top"><h2>${esc(title)}</h2>${extra}<button class="icon-btn" data-close aria-label="Sluiten">${ICON.x}</button></div>`;
 }
 function popSheet() {
   const s = sheets.pop();
@@ -149,7 +136,11 @@ async function openVerseSheet(bi, c, v, opt = {}) {
   openSheet({
     label: title, crumb: refText(ref),
     build: async (el, trail) => {
-      el.innerHTML = sheetHead(title, trail) + '<div class="sh-body"><p class="loading">Laden…</p></div><div class="sh-foot"></div>';
+      const m = single ? markFor(bi, ref[1], ref[2]) : null;
+      const extra = (single ? `<button class="icon-btn colbtn" data-colbtn aria-label="Markering: ${m && m.col ? COLORS[m.col - 1] : 'geen'}, wijzigen"><span class="dot${m && m.col ? ' hl-' + m.col : ' none'}"></span></button>` : '') +
+        `<button class="icon-btn" data-claude aria-label="Vraag Claude">${ICON.chat}</button>` +
+        `<button class="icon-btn" data-copy aria-label="Vers kopiëren">${ICON.copy}</button>`;
+      el.innerHTML = sheetHead(title, trail, extra) + '<div class="sh-body"><p class="loading">Laden…</p></div>' + (opt.root ? '' : '<div class="sh-foot"></div>');
       try { await ensureNotes(bi); } catch { /* zonder kanttekeningen verder */ }
       if (settings.orig) { try { await ensureOrig(origKind(bi)); } catch { /* alleen SV */ } }
       fillVerseSheet(el, bi, ref, opt);
@@ -182,7 +173,7 @@ function fillVerseSheet(el, bi, ref, opt) {
   const total = groups.reduce((n, g) => n + g.notes.length, 0);
   const allRefs = [];
   groups.forEach(g => g.notes.forEach(n => n[4].forEach(r => { if (!allRefs.some(x => x.join() === r.join())) allRefs.push(r); })));
-  html += `<h3 class="sh-h">Kanttekeningen${total ? ' · ' + total : ''}</h3>`;
+  if (verses.length > 1) html += `<h3 class="sh-h">Kanttekeningen${total ? ' · ' + total : ''}</h3>`;
   if (groups.length === 1 && total > 1) {
     html += `<div class="ltrbar" role="group" aria-label="Spring naar kanttekening">` +
       groups[0].notes.map((n, i) => `<button class="ltr${opt.focus === i ? ' on' : ''}" data-jump="${i}" aria-label="Kanttekening ${noteLetter(i)}${n[2] ? ': ' + esc(n[2]) : ''}">${noteLetter(i)}</button>`).join('') +
@@ -216,21 +207,21 @@ function fillVerseSheet(el, bi, ref, opt) {
   if (single) {
     const [sc, sv_] = verses[0];
     body.innerHTML = versesHTML + mineHTML(bi, sc, sv_) +
-      `<div class="sh-tabs"><div class="seg" role="tablist" aria-label="Over dit vers">
-        <button role="tab" data-tab="kt">Kanttekeningen</button><button role="tab" data-tab="w">Woorden</button><button role="tab" data-tab="cf">Kerkvaders<span class="cf-n"></span></button></div></div>
+      `<div class="utabs" role="tablist" aria-label="Over dit vers">
+        <button role="tab" data-tab="kt">Kanttekeningen${total ? `<span class="badge">${total}</span>` : ''}</button><button role="tab" data-tab="w">Woorden</button><button role="tab" data-tab="cf">Kerkvaders<span class="badge cf-n" hidden></span></button></div>
       <div class="tabc"></div>`;
-    body.querySelector('.sh-tabs .seg').classList.add('seg3');
     ensureCfIndex().then(ix => {
-      const has = ix && ix.v[bi] && ix.v[bi][sc] && ix.v[bi][sc].includes(sv_);
-      const n = body.querySelector('.cf-n'); if (n && has) n.textContent = ' •';
+      const n = cfCount(bi, sc, sv_);
+      const b = body.querySelector('.cf-n'); if (b && n) { b.textContent = n; b.hidden = false; }
     }).catch(() => {});
     wireMine(body, bi, sc, sv_);
     tabc = body.querySelector('.tabc');
-    body.querySelector('.sh-tabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b && b.dataset.tab !== tab) { tab = b.dataset.tab; showTab(true); } };
+    body.querySelector('.utabs').onclick = e => { const b = e.target.closest('[data-tab]'); if (b && b.dataset.tab !== tab) { tab = b.dataset.tab; showTab(true); } };
   }
   function showTab(switched) {
-    const mineSec = body.querySelector('.mine'); if (mineSec) mineSec.hidden = tab !== 'kt';
-    el.querySelectorAll('[data-tab]').forEach(b => { b.setAttribute('aria-selected', String(b.dataset.tab === tab)); b.setAttribute('aria-pressed', String(b.dataset.tab === tab)); });
+    el.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
+    const mb = body.querySelector('.mine-body');
+    if (switched && mb && !mb.hidden && tab !== 'kt') body.querySelector('.mine-sum').click();
     if (tab === 'kt') { tabc.innerHTML = ktHTML; }
     else if (tab === 'cf') {
       tabc.innerHTML = '<p class="loading">Kerkvaders laden…</p>';
@@ -240,16 +231,17 @@ function fillVerseSheet(el, bi, ref, opt) {
       tabc.innerHTML = '<p class="loading">Woorden laden…</p>';
       renderWords(tabc, bi, verses[0][0], verses[0][1]).catch(() => { tabc.innerHTML = '<p class="hint">Woordinformatie kon niet worden geladen.</p>'; });
     }
-    if (switched) body.scrollTo({ top: Math.max(0, tabc.offsetTop - 70) });
+    if (switched) body.scrollTo({ top: Math.max(0, tabc.offsetTop - 60) });
   }
   if (!single) body.innerHTML = versesHTML + ktHTML;
-  else showTab();
+  else {
+    showTab();
+    if (opt.editNote) openMine(el, true);
+  }
 
   const [c0, v0] = verses[0];
   const foot = el.querySelector('.sh-foot');
-  foot.innerHTML = (opt.root ? '' : `<button class="btn primary" data-read>${ICON.book}Lees ${esc(BOOKS[bi].abbr)} ${firstC}</button>`) +
-    `<button class="btn${opt.root ? ' primary' : ''}" data-claude>${ICON.chat}Vraag Claude</button>` +
-    `<button class="btn icon" data-copy aria-label="Vers kopiëren">${ICON.copy}</button>`;
+  if (foot) foot.innerHTML = `<button class="btn primary" data-read>${ICON.book}Lees ${esc(BOOKS[bi].name)} ${firstC}</button>`;
 
   el.onclick = e => {
     const t = e.target.closest('button'); if (!t) return;
@@ -259,6 +251,7 @@ function fillVerseSheet(el, bi, ref, opt) {
     if (t.dataset.r) { const r = t.dataset.r.split('.').map(Number); openVerseSheet(r[0], r[1], r[2] || 1, { ref: r }); return; }
     if (t.dataset.more != null) { el.querySelectorAll('.more-note').forEach(n => (n.hidden = false)); t.remove(); return; }
     if (t.dataset.jump != null) { jumpToNote(el, +t.dataset.jump); return; }
+    if (t.dataset.colbtn != null) { openMine(el); return; }
     if (t.dataset.k != null) { selectWord(el, bi, +t.dataset.k, t); return; }
     if (t.dataset.wclaude != null) { openClaudeSheet(bi, ref, { word: el._word }); return; }
     if (t.dataset.cfmore != null) { const q = t.closest('.cf').querySelector('.cf-q'); q.classList.toggle('open'); t.textContent = q.classList.contains('open') ? 'Minder tonen' : 'Lees verder'; return; }
@@ -647,12 +640,17 @@ function mineHTML(bi, c, v) {
   </section>`;
 }
 function mineSummary(m) {
-  const note = (m.note || '').trim();
-  const dot = m.col ? `<span class="dot hl-${m.col}" aria-hidden="true"></span>` : `<span class="mine-ico">${ICON.pen}</span>`;
-  const label = m.col || note
-    ? `<span class="ms-t">${m.col ? COLORS[m.col - 1] : 'Notitie'}${note ? ' · <span class="ms-n">' + esc(note.length > 60 ? note.slice(0, 58) + '…' : note) + '</span>' : ''}</span>`
-    : '<span class="ms-t">Markeren of notitie toevoegen</span>';
-  return dot + label + ICON.down;
+  const note = (m.note || '').trim().replace(/\s+/g, ' ');
+  return `<span class="mine-ico">${ICON.pen}</span>` + (note
+    ? `<span class="ms-t ms-n">${myNoteHTML(note)}</span><span class="ms-act">Bewerk</span>`
+    : `<span class="ms-t">${m.col ? 'Notitie toevoegen' : 'Kleur of notitie toevoegen'}</span><span class="ms-act">${ICON.down}</span>`);
+}
+function openMine(el, focus) {
+  const sec = el.querySelector('.mine'); if (!sec) return;
+  const bodyEl = sec.querySelector('.mine-body');
+  if (bodyEl.hidden) sec.querySelector('.mine-sum').click();
+  sec.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  if (focus) setTimeout(() => { const ta = sec.querySelector('textarea'); if (ta) ta.focus(); }, 280);
 }
 function wireMine(root, bi, c, v) {
   const sec = root.querySelector('.mine');
@@ -660,7 +658,14 @@ function wireMine(root, bi, c, v) {
   const status = sec.querySelector('.mine-s');
   const sum = sec.querySelector('.mine-sum');
   const bodyEl = sec.querySelector('.mine-body');
-  const refresh = () => { if (redrawReader) redrawReader(); sum.innerHTML = mineSummary(markFor(bi, c, v) || { col: 0, note: '' }); };
+  const refresh = () => {
+    if (redrawReader) redrawReader();
+    const m = markFor(bi, c, v) || { col: 0, note: '' };
+    sum.innerHTML = mineSummary(m);
+    const sheet = root.closest('.sheet');
+    const dot = sheet && sheet.querySelector('.colbtn .dot');
+    if (dot) { dot.className = 'dot' + (m.col ? ' hl-' + m.col : ' none'); dot.parentElement.setAttribute('aria-label', 'Markering: ' + (m.col ? COLORS[m.col - 1] : 'geen') + ', wijzigen'); }
+  };
   sum.onclick = e => {
     e.stopPropagation();
     const open = bodyEl.hidden;
@@ -778,7 +783,7 @@ async function runSearchExtra(q, gotoCard, box) {
     }
   }
   const label = where === 'mine' ? ['notitie', 'notities'] : ['kanttekening', 'kanttekeningen'];
-  box.innerHTML = gotoCard + `<p class="meta">${hits.length ? hits.length.toLocaleString('nl-NL') + ' ' + label[hits.length === 1 ? 0 : 1] : 'Geen treffers'}</p>`;
+  box.innerHTML = gotoCard + `<p class="meta">${hits.length ? hits.length.toLocaleString('nl-NL') + ' ' + label[hits.length === 1 ? 0 : 1] : 'Geen treffers'} · ${esc(searchSummary())}</p>`;
   const sc = $('#sscroll'); if (sc) sc.scrollTop = 0;
   let shown = 0;
   const more = () => {
@@ -823,7 +828,7 @@ let CFIX = null; const CF = {};
 async function ensureCfIndex() { if (!CFIX) CFIX = await loadJSON('cf-index'); return CFIX; }
 async function renderFathers(box, bi, c, v) {
   const ix = await ensureCfIndex();
-  const has = ix.v[bi] && ix.v[bi][c] && ix.v[bi][c].includes(v);
+  const has = cfCount(bi, c, v) > 0;
   const intro = '<p class="hint">Uitleg van Augustinus en Johannes Chrysostomus bij dit vers, in het Engels. De vertalingen zijn deels 19e-eeuws en deels machinevertaling door historicalchristian.faith. Tik op <b>Vraag Claude</b> voor een Nederlandse vertaling met uitleg.</p>';
   if (!has) { box.innerHTML = intro + '<p class="empty" style="margin:24px 8px">Bij dit vers staat (nog) niets van Augustinus of Chrysostomus. Probeer een vers in de buurt.</p>'; return; }
   if (!CF[bi]) CF[bi] = await loadJSON('cf/' + bi);
@@ -846,4 +851,162 @@ async function renderFathers(box, bi, c, v) {
       <div class="cf-act"><button class="btn" data-cfclaude="${i}">${ICON.chat}Vraag Claude</button><a class="btn" href="${tr}" target="_blank" rel="noopener">Vertaal ${EXT}</a></div>
     </article>`;
   }).join('');
+}
+
+
+function cfCount(bi, c, v) {
+  const ix = CFIX;
+  return (ix && ix.v[bi] && ix.v[bi][c] && ix.v[bi][c][v]) || 0;
+}
+
+/* ---------- Weergave (Aa) ---------- */
+function openWeergave(origName) {
+  openSheet({
+    label: 'Weergave', crumb: 'Weergave',
+    build: (el, trail) => {
+      const rows = [
+        ['sv', 'Statenvertaling', 'De Nederlandse tekst'],
+        ['orig', origName, 'De grondtekst onder of naast de SV'],
+        ['marks', 'Kanttekeningen', 'Lettertjes a, b, c in de tekst'],
+        ['mine', 'Markeringen en notities', 'Je kleuren en notities bij verzen']
+      ];
+      el.innerHTML = sheetHead('Weergave', trail) + `<div class="sh-body">
+        <div class="switches">${rows.map(([k, l, sub]) => `<button class="switch" role="switch" data-k="${k}"><span><b>${esc(l)}</b><small>${sub}</small></span><span class="track"><span class="knob"></span></span></button>`).join('')}</div>
+        <h3 class="sh-h">Indeling</h3>
+        <div class="seg" role="group" aria-label="Indeling"><button data-l="stack">Onder elkaar</button><button data-l="cols">Naast elkaar</button></div>
+        <p class="hint" id="cols-hint" hidden>Naast elkaar werkt als zowel de SV als de grondtekst aan staan.</p>
+        <h3 class="sh-h">Tekstgrootte</h3>
+        <div class="sizerow"><button class="size-btn sm" data-s="-1" aria-label="Kleinere tekst">A</button>
+          <div class="sizebar" aria-hidden="true"><div></div></div>
+          <button class="size-btn lg" data-s="1" aria-label="Grotere tekst">A</button></div>
+        <p class="size-demo" lang="nl">Want alzo lief heeft God de wereld gehad…</p>
+      </div>`;
+      const sync = () => {
+        el.querySelectorAll('.switch').forEach(b => b.setAttribute('aria-checked', String(!!settings[b.dataset.k])));
+        const both = settings.sv && settings.orig;
+        el.querySelectorAll('[data-l]').forEach(b => {
+          b.setAttribute('aria-pressed', String((both && settings.layout === 'cols') === (b.dataset.l === 'cols')));
+          if (b.dataset.l === 'cols') b.disabled = !both;
+        });
+        el.querySelector('#cols-hint').hidden = both;
+        el.querySelector('.sizebar div').style.width = ((settings.size - 14) / 14 * 100) + '%';
+        el.querySelector('.size-demo').style.fontSize = settings.size + 'px';
+      };
+      el.onclick = e => {
+        const t = e.target.closest('button'); if (!t) return;
+        if (t.dataset.close != null) { closeAll(); return; }
+        if (t.dataset.k) settings[t.dataset.k] = !settings[t.dataset.k];
+        else if (t.dataset.l) settings.layout = t.dataset.l;
+        else if (t.dataset.s) { settings.size = Math.min(28, Math.max(14, settings.size + +t.dataset.s)); applySize(); }
+        else return;
+        saveSettings(); sync();
+        if (redrawReader) redrawReader();
+      };
+      sync();
+    }
+  });
+}
+
+/* ---------- Actiebalk bij een vers ---------- */
+let verseBarSel = null;
+const vbar = document.createElement('section');
+vbar.className = 'vbar'; vbar.hidden = true;
+document.body.appendChild(vbar);
+function closeVerseBar(silent) {
+  if (!verseBarSel && vbar.hidden) return;
+  const old = verseBarSel; verseBarSel = null;
+  vbar.hidden = true;
+  const sc = document.querySelector('#reader-scroll'); if (sc) sc.classList.remove('has-bar');
+  if (!silent && old) { const el = document.getElementById('v' + old.v); if (el) el.classList.remove('sel'); }
+}
+function toggleVerseBar(bi, c, v) {
+  if (verseBarSel && verseBarSel.b === bi && verseBarSel.c === c && verseBarSel.v === v) { closeVerseBar(); return; }
+  document.querySelectorAll('.verse.sel').forEach(x => x.classList.remove('sel'));
+  verseBarSel = { b: bi, c, v };
+  const vel = document.getElementById('v' + v); if (vel) vel.classList.add('sel');
+  renderVerseBar();
+  vbar.hidden = false;
+  const sc = document.querySelector('#reader-scroll');
+  if (sc && vel) {
+    sc.classList.add('has-bar');
+    requestAnimationFrame(() => {
+      const r = vel.getBoundingClientRect(), b = vbar.getBoundingClientRect(), h = document.querySelector('.top').getBoundingClientRect();
+      if (r.bottom > b.top - 8) sc.scrollBy({ top: Math.min(r.bottom - b.top + 16, r.top - h.bottom - 8), behavior: 'smooth' });
+    });
+  }
+  ensureCfIndex().then(() => { if (verseBarSel && verseBarSel.v === v) renderVerseBar(); }).catch(() => {});
+}
+function renderVerseBar() {
+  const { b: bi, c, v } = verseBarSel;
+  const m = markFor(bi, c, v) || { col: 0, note: '' };
+  const kt = (notesFor(bi, c, v) || []).length;
+  const cf = cfCount(bi, c, v);
+  const badge = n => n ? `<span class="badge">${n}</span>` : '';
+  vbar.setAttribute('aria-label', 'Acties voor ' + refLabel(bi, c, v));
+  vbar.innerHTML = `<div class="vb-h"><b>${esc(refLabel(bi, c, v))}</b><span>${m.col ? COLORS[m.col - 1] : 'Kies een kleur'}</span>
+      <button class="icon-btn" data-vb="close" aria-label="Sluiten">${ICON.x}</button></div>
+    <div class="vb-sw" role="radiogroup" aria-label="Kleur">${[0, ...COLORS.map((_, i) => i + 1)].map(i =>
+      `<button class="sw sw-${i}" role="radio" data-col="${i}" aria-checked="${m.col === i}" aria-label="${i ? COLORS[i - 1] : 'Geen markering'}">${i ? ICON.check : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 19 5"/></svg>'}</button>`).join('')}</div>
+    <div class="vb-act">
+      <button data-vb="note">${ICON.pen}<span>${(m.note || '').trim() ? 'Notitie' : 'Notitie'}</span>${(m.note || '').trim() ? '<span class="badge dotb"></span>' : ''}</button>
+      <button data-vb="kt">${ICON.doc}<span>Kantt.</span>${badge(kt)}</button>
+      <button data-vb="w"><span class="alpha" aria-hidden="true">α</span><span>Woorden</span></button>
+      <button data-vb="cf">${ICON.cross}<span>Vaders</span>${badge(cf)}</button>
+      <button data-vb="claude">${ICON.chat}<span>Claude</span></button>
+      <button data-vb="copy">${ICON.copy}<span>Kopieer</span></button>
+    </div>`;
+}
+vbar.addEventListener('click', e => {
+  const t = e.target.closest('button'); if (!t || !verseBarSel) return;
+  const { b: bi, c, v } = verseBarSel;
+  if (t.dataset.col != null) {
+    setMark(bi, c, v, { col: +t.dataset.col });
+    renderVerseBar();
+    if (redrawReader) redrawReader();
+    return;
+  }
+  const a = t.dataset.vb;
+  if (a === 'close') { closeVerseBar(); return; }
+  if (a === 'copy') { copyText(`${refLabel(bi, c, v)} (SV)\n${SV[bi][c - 1][v - 1]}`); return; }
+  closeVerseBar();
+  if (a === 'claude') { openClaudeSheet(bi, [bi, c, v, c, v]); return; }
+  openVerseSheet(bi, c, v, { root: true, tab: a === 'note' ? 'kt' : a, editNote: a === 'note' });
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !sheets.length && verseBarSel) closeVerseBar(); });
+
+
+/* ---------- Zoekfilters ---------- */
+function openSearchFilters(onChange) {
+  openSheet({
+    label: 'Filters', crumb: 'Filters',
+    build: (el, trail) => {
+      let sel = SCOPES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+      sel += '<optgroup label="Oude Testament">' + BOOKS.slice(0, 39).map((b, i) => `<option value="${i}">${esc(b.name)}</option>`).join('') + '</optgroup>';
+      sel += '<optgroup label="Nieuwe Testament">' + BOOKS.slice(39).map((b, i) => `<option value="${i + 39}">${esc(b.name)}</option>`).join('') + '</optgroup>';
+      const rows = [
+        ['wholeWords', 'Hele woorden', '"licht" vindt niet "lichten" of "verlichten"'],
+        ['exact', 'Exacte zin', 'De woorden in deze volgorde, naast elkaar'],
+        ['showOrigInSearch', 'Grondtekst tonen', 'Grieks of Hebreeuws onder elk resultaat']
+      ];
+      el.innerHTML = sheetHead('Filters', trail) + `<div class="sh-body">
+        <label class="sh-h" for="fscope">Zoeken in</label>
+        <div class="selbox"><select id="fscope">${sel}</select>${ICON.down}</div>
+        <div class="switches">${rows.map(([k, l, sub]) => `<button class="switch" role="switch" data-k="${k}"><span><b>${l}</b><small>${esc(sub)}</small></span><span class="track"><span class="knob"></span></span></button>`).join('')}</div>
+        <button class="more" data-reset>Standaard herstellen</button>
+      </div>`;
+      const fs = el.querySelector('#fscope');
+      fs.value = settings.scope; if (fs.value !== settings.scope) fs.value = 'all';
+      const sync = () => el.querySelectorAll('.switch').forEach(b => b.setAttribute('aria-checked', String(!!settings[b.dataset.k])));
+      fs.onchange = () => { settings.scope = fs.value; saveSettings(); onChange(); };
+      el.onclick = e => {
+        const t = e.target.closest('button'); if (!t) return;
+        if (t.dataset.close != null) { closeAll(); return; }
+        if (t.dataset.reset != null) { Object.assign(settings, { scope: 'all', wholeWords: true, exact: false }); fs.value = 'all'; }
+        else if (t.dataset.k) settings[t.dataset.k] = !settings[t.dataset.k];
+        else return;
+        saveSettings(); sync(); onChange();
+      };
+      sync();
+    }
+  });
 }
